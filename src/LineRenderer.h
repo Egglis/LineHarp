@@ -147,6 +147,7 @@ namespace lineweaver
 
 		// support for angular brush
 		bool m_enableAngularBrush = false;
+		float m_testSlider = 0.0f;
 		float m_brushingAngle = 0.0f;
 
 		std::vector<unsigned int> m_totalPixelsPerTrajectory;

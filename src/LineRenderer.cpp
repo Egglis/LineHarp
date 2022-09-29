@@ -187,7 +187,7 @@ void LineRenderer::display()
 	double mouseX, mouseY;
 	glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
 	m_lensPosition = vec2(2.0f*float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f*float(mouseY) / float(viewportSize.y) + 1.0f);
-
+	//globjects::debug() << m_lensPosition.x << "," << m_lensPosition.y << std::endl;
 	float fT = 0.5f;
 	m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
 
@@ -232,8 +232,9 @@ void LineRenderer::display()
 		{
 			//std::cout << "File selection event - " << "File: " << m_fileDataID << "\n";
 			// initialize data able
-			if (fileMode == 0)
+			if (fileMode == 0) {
 				viewer()->scene()->tableData()->load(m_dataFilename);
+			}
 			else
 			{	
 				if (m_dataFilename.find("AndrewsPlot") != std::string::npos ) {
@@ -392,7 +393,7 @@ void LineRenderer::display()
 
 		ImGui::Checkbox("Enable Focus-Lens", &m_enableLens);
 		ImGui::Checkbox("Enable Angular-Brushing", &m_enableAngularBrush);
-
+		ImGui::SliderFloat("Testing Slider", &m_testSlider, 0.0f, 1.0f);
 		ImGui::SliderFloat("Brushing Angle", &viewer()->m_scrollWheelAngle, -90.0f, 90.0f);
 		m_brushingAngle = viewer()->m_scrollWheelAngle;
 	}
@@ -546,6 +547,8 @@ void LineRenderer::display()
 	float scaledLineWidth = length(vec2(inverseModelViewProjectionMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f) - inverseModelViewProjectionMatrix *(vec4(m_lineWidth, 0.0f, 0.0f, 1.0f)))/ vec2(viewportSize) );
 
 	m_programLine->setUniform("modelViewProjectionMatrix", modelViewProjectionMatrix);
+	m_programLine->setUniform("inverseModelViewProjectionMatrix", inverseModelViewProjectionMatrix);
+
 
 	m_programLine->setUniform("xAxisScaling", m_xAxisScaling);
 	m_programLine->setUniform("yAxisScaling", m_yAxisScaling);
@@ -569,6 +572,7 @@ void LineRenderer::display()
 	m_programLine->setUniform("lensRadius", m_lensRadius);
 	
 	m_programLine->setUniform("brushingAngle", m_brushingAngle);
+	m_programLine->setUniform("testSlider", m_testSlider);
 
 	m_vao->bind();
 	m_programLine->use();

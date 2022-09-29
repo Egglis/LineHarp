@@ -52,6 +52,7 @@ uniform vec2 lensPosition;
 uniform vec2 delayedLensPosition;
 
 uniform float brushingAngle;
+uniform float testSlider;
 
 float computeDistanceToLineSegment(vec2 v, vec2 w, vec2 p){
 
@@ -131,6 +132,7 @@ void main()
 	if(distanceToLens <= epsilon && pxlDistance <= lensRadius){
 		
 		float scaling = clamp(1.0f-pow(length(lensPosition-delayedLensPosition),0.025f), 0.0f, 1.0f);
+		float scaling = clamp(1.0f-pow(length(lensPosition-delayedLensPosition),0.025f), 0.0f, 10.0f);
 		currentImportance += (2.0f-pxlDistance/lensRadius)*scaling;
 
 		//Debug - Output computed importance as color -------------------------
@@ -196,6 +198,7 @@ void main()
 	
 	float opacity = lineOutline;
 	lineChartTexture.rgb = finalColor*opacity;
+	//lineChartTexture.rgb = vec3(1,0,0)*(1.0f-pxlDistance/lensRadius);
 	lineChartTexture.a = opacity;
 
 #ifdef LINE_HALOS

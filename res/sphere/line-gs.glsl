@@ -35,23 +35,33 @@ flat out vec4 gsEnd;
 
 uniform mat4 modelViewProjectionMatrix;
 
+// Magic lens
 uniform float lineWidth;
+uniform float testSlider;
+uniform vec2 lensPosition;
+uniform float lensRadius;
 
 uniform vec2 viewportSize;
 
 uniform int numberOfTrajectories;
 uniform int numberOfTimesteps;
 
-void spawnPoint(vec4 S){
+void spawnPoint(vec4 S, vec3 prev, vec3 start, vec3 end, vec3 next){
+	float aspectRatio = viewportSize.x/viewportSize.y;
 
 	gsFragmentPosition = modelViewProjectionMatrix * S;
+
+	// Sets the fragment position
 	gl_Position = gsFragmentPosition;
 	
 #ifdef RS_LINKEDLIST
-	gsPrev = modelViewProjectionMatrix * gl_in[0].gl_Position;
-	gsStart = modelViewProjectionMatrix * gl_in[1].gl_Position;
-	gsEnd = modelViewProjectionMatrix * gl_in[2].gl_Position;
-	gsNext = modelViewProjectionMatrix * gl_in[3].gl_Position;
+
+	// Only used in the fragment shader
+	gsPrev = modelViewProjectionMatrix * vec4(prev,1);
+	gsStart = modelViewProjectionMatrix * vec4(start,1);
+	gsEnd = modelViewProjectionMatrix * vec4(end,1);
+	gsNext = modelViewProjectionMatrix * vec4(next,1);
+
 #else
 	gsStart = modelViewProjectionMatrix * gl_in[0].gl_Position;
 	gsEnd = modelViewProjectionMatrix * gl_in[1].gl_Position;    
@@ -61,22 +71,49 @@ void spawnPoint(vec4 S){
 	gsFragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
 		
 	// consider the current aspect ratio to make sure all halos have equal width
-	float aspectRatio = viewportSize.x/viewportSize.y;
 	gsFragmentLineWidth *= aspectRatio;	
+
 
 	EmitVertex();
 }
 
+
+void lens(inout vec3 a, inout vec3 b) {
+	float aspectRatio = viewportSize.x/viewportSize.y;
+	vec4 Ma = modelViewProjectionMatrix*vec4(b,1);
+	vec2 lPos = lensPosition;
+	Ma.x *= aspectRatio;
+	lPos.x *= aspectRatio;
+
+	float dl = distance(lPos, Ma.xy);
+	if (dl < lensRadius && dl > 0) {
+		vec2 dir = normalize(vec2(Ma.x - lPos.x, Ma.y - lPos.y));
+		float x = dl/lensRadius;
+		float scaling = cos(3.1415 + x*2*3.1415)+1;
+
+		a += vec3(dir*scaling*testSlider,0);
+		b += vec3(dir*scaling*testSlider,0);
+	}
+
+}
+
+
 void main() {
+
 
 #ifdef RS_LINKEDLIST
 	// author: Talis Tammearu
 	// the implementation is taken from: https://blog.tammearu.eu/posts/gllines/
 
+
     vec3 prev = gl_in[0].gl_Position.xyz;
     vec3 start = gl_in[1].gl_Position.xyz;
     vec3 end = gl_in[2].gl_Position.xyz;
     vec3 next = gl_in[3].gl_Position.xyz;
+
+
+	lens(prev, start);
+	lens(next, end);
 
     vec3 lhs = cross(normalize(end-start), vec3(0.0, 0.0, -1.0));
 
@@ -168,9 +205,9 @@ void main() {
 	gsFragmentLayerLuminance = vsOut[1].pointImportance;
 	gsFragmentImportance = vsOut[1].pointImportance;
 
-	spawnPoint(vec4(start+startOffset+startLhs/startInvScale, 1.0));
+	spawnPoint(vec4(start+startOffset+startLhs/startInvScale, 1.0),prev,start,end,next);
 #else
-	spawnPoint(vec4(start+startOffset+direction, 1.0f));
+	spawnPoint(vec4(start+startOffset+direction, 1.0f), vec3(0), start, end, vec3(0));
 #endif
 	
 	// spawn impostor-points -----------------------------------------------------------------------------------------
@@ -180,9 +217,9 @@ void main() {
 	gsFragmentLayerLuminance = vsOut[1].pointImportance;
 	gsFragmentImportance = vsOut[1].pointImportance;
 
-	spawnPoint(vec4(start+startOffset-startLhs/startInvScale, 1.0));
+	spawnPoint(vec4(start+startOffset-startLhs/startInvScale, 1.0),prev,start,end,next);
 #else
-	spawnPoint(vec4(start+startOffset-direction, 1.0f));
+	spawnPoint(vec4(start+startOffset-direction, 1.0f), vec3(0), start, end, vec3(0));
 #endif
 
 	// spawn impostor-points -----------------------------------------------------------------------------------------
@@ -192,9 +229,9 @@ void main() {
 	gsFragmentLayerLuminance = vsOut[2].pointImportance;
 	gsFragmentImportance = vsOut[2].pointImportance;
 
-	spawnPoint(vec4(end+endOffset+endLhs/endInvScale, 1.0));
+	spawnPoint(vec4(end+endOffset+endLhs/endInvScale, 1.0),prev,start,end,next);
 #else
-	spawnPoint(vec4(end+endOffset+direction, 1.0f));
+	spawnPoint(vec4(end+endOffset+direction, 1.0f), vec3(0), start, end, vec3(0));
 #endif
 
 	// spawn impostor-points -----------------------------------------------------------------------------------------
@@ -204,12 +241,13 @@ void main() {
 	gsFragmentLayerLuminance = vsOut[2].pointImportance;
 	gsFragmentImportance = vsOut[2].pointImportance;
 
-	spawnPoint(vec4(end+endOffset-endLhs/endInvScale, 1.0));
+	spawnPoint(vec4(end+endOffset-endLhs/endInvScale, 1.0),prev,start,end,next);
 #else
-	spawnPoint(vec4(end+endOffset-direction, 1.0f));
+	spawnPoint(vec4(end+endOffset-direction, 1.0f), vec3(0), start, end, vec3(0));
 #endif
 
 	//----------------------------------------------------------------------------------------------------------------
+
 
 	EndPrimitive();
 }
