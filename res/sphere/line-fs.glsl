@@ -132,7 +132,6 @@ void main()
 	if(distanceToLens <= epsilon && pxlDistance <= lensRadius){
 		
 		float scaling = clamp(1.0f-pow(length(lensPosition-delayedLensPosition),0.025f), 0.0f, 1.0f);
-		float scaling = clamp(1.0f-pow(length(lensPosition-delayedLensPosition),0.025f), 0.0f, 10.0f);
 		currentImportance += (2.0f-pxlDistance/lensRadius)*scaling;
 
 		//Debug - Output computed importance as color -------------------------
