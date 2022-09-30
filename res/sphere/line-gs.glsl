@@ -78,22 +78,38 @@ void spawnPoint(vec4 S, vec3 prev, vec3 start, vec3 end, vec3 next){
 }
 
 
-void lens(inout vec3 a, inout vec3 b) {
+float lens(inout vec3 a, inout vec3 b) {
 	float aspectRatio = viewportSize.x/viewportSize.y;
 	vec4 Ma = modelViewProjectionMatrix*vec4(b,1);
 	vec2 lPos = lensPosition;
+
 	Ma.x *= aspectRatio;
 	lPos.x *= aspectRatio;
-
+	
+	// Computes Distacne to vertex
 	float dl = distance(lPos, Ma.xy);
-	if (dl < lensRadius && dl > 0) {
+
+	// vec2 ndCoordinates = (a.xy-viewportSize/2)/(viewportSize/2);
+	// float pxlDistance = length((lensPosition-ndCoordinates) * vec2(aspectRatio, 1.0));
+
+
+	if (dl <= lensRadius && dl > 0) {
+		
+		// Compute displacment direction
 		vec2 dir = normalize(vec2(Ma.x - lPos.x, Ma.y - lPos.y));
+
+		// Scaling is done with a cos function
+		float zoomIntensity = 1;
 		float x = dl/lensRadius;
-		float scaling = cos(3.1415 + x*2*3.1415)+1;
+		float scaling = zoomIntensity*cos(3.1415 + x*2*3.1415)+zoomIntensity;
 
 		a += vec3(dir*scaling*testSlider,0);
 		b += vec3(dir*scaling*testSlider,0);
+		return lensRadius - dl;
 	}
+
+	return 0;
+
 
 }
 
@@ -111,9 +127,9 @@ void main() {
     vec3 end = gl_in[2].gl_Position.xyz;
     vec3 next = gl_in[3].gl_Position.xyz;
 
-
-	lens(prev, start);
-	lens(next, end);
+	// Displace (prev, start) and then (next, end)
+	float startImportance = lens(prev, start)*3;
+	float endImportance = lens(next, end)*3;
 
     vec3 lhs = cross(normalize(end-start), vec3(0.0, 0.0, -1.0));
 

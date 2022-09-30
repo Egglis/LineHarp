@@ -289,8 +289,9 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
 				std::cout << "Reloading shaders for viewer << " << std::endl;
 				
-					viewer->m_vertexShaderSourceUi->reload();
-				viewer->m_fragmentShaderSourceUi->reload();
+				// Crashes the program if not commented out, not sure what it does
+				// viewer->m_vertexShaderSourceUi->reload();
+				// viewer->m_fragmentShaderSourceUi->reload();
 
 				std::cout << "2 shaders reloaded." << std::endl << std::endl;
 
