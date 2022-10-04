@@ -35,7 +35,6 @@ namespace lineweaver
 	public:
 		LineRenderer(Viewer *viewer);
 		virtual void display();
-		virtual std::list<globjects::File*> shaderFiles() const;
 
 	private:
 		
@@ -49,45 +48,9 @@ namespace lineweaver
 		std::unique_ptr<globjects::VertexArray> m_vaoQuad = std::make_unique<globjects::VertexArray>();
 		std::unique_ptr<globjects::Buffer> m_verticesQuad = std::make_unique<globjects::Buffer>();
 		
-		std::unique_ptr<globjects::Program> m_programLine = std::make_unique<globjects::Program>();
-		std::unique_ptr<globjects::Program> m_programBlur = std::make_unique<globjects::Program>();
-		std::unique_ptr<globjects::Program> m_programBlend = std::make_unique<globjects::Program>();
 
 		std::unique_ptr<globjects::StaticStringSource> m_shaderSourceDefines = nullptr;
 		std::unique_ptr<globjects::NamedString> m_shaderDefines = nullptr;
-
-		std::unique_ptr<globjects::File> m_shaderSourceGlobals = nullptr;
-		std::unique_ptr<globjects::NamedString> m_shaderGlobals = nullptr;
-
-		//------------------------------------------------------------------------------------------------------
-		std::unique_ptr<globjects::File> m_vertexShaderSourceLine = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_vertexShaderTemplateLine = nullptr;
-		std::unique_ptr<globjects::Shader> m_vertexShaderLine = nullptr;
-
-		std::unique_ptr<globjects::File> m_geometryShaderSourceLine = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_geometryShaderTemplateLine = nullptr;
-		std::unique_ptr<globjects::Shader> m_geometryShaderLine = nullptr;
-
-		std::unique_ptr<globjects::File> m_fragmentShaderSourceLine = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_fragmentShaderTemplateLine = nullptr;
-		std::unique_ptr<globjects::Shader> m_fragmentShaderLine = nullptr;
-		//------------------------------------------------------------------------------------------------------
-		std::unique_ptr<globjects::File> m_vertexShaderSourceImage = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_vertexShaderTemplateImage = nullptr;
-		std::unique_ptr<globjects::Shader> m_vertexShaderImage = nullptr;
-
-		std::unique_ptr<globjects::File> m_geometryShaderSourceImage = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_geometryShaderTemplateImage = nullptr;
-		std::unique_ptr<globjects::Shader> m_geometryShaderImage = nullptr;
-		//------------------------------------------------------------------------------------------------------
-		std::unique_ptr<globjects::File> m_fragmentShaderSourceBlur = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_fragmentShaderTemplateBlur = nullptr;
-		std::unique_ptr<globjects::Shader> m_fragmentShaderBlur = nullptr;
-		//------------------------------------------------------------------------------------------------------
-		std::unique_ptr<globjects::File> m_fragmentShaderSourceBlend = nullptr;
-		std::unique_ptr<globjects::AbstractStringSource> m_fragmentShaderTemplateBlend = nullptr;
-		std::unique_ptr<globjects::Shader> m_fragmentShaderBlend = nullptr;
-		//------------------------------------------------------------------------------------------------------
 
 		//SSBO
 		std::unique_ptr<globjects::Buffer> m_intersectionBuffer = std::make_unique<globjects::Buffer>();

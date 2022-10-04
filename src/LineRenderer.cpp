@@ -43,49 +43,26 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 	m_shaderSourceDefines = StaticStringSource::create("");
 	m_shaderDefines = NamedString::create("/defines.glsl", m_shaderSourceDefines.get());
 
-	m_shaderSourceGlobals = File::create("./res/sphere/globals.glsl");
-	m_shaderGlobals = NamedString::create("/globals.glsl", m_shaderSourceGlobals.get());
-	//------------------------------------------------------------------------------------------------------
-	m_vertexShaderSourceLine = Shader::sourceFromFile("./res/sphere/line-vs.glsl");
-	m_geometryShaderSourceLine = Shader::sourceFromFile("./res/sphere/line-gs.glsl");
-	m_fragmentShaderSourceLine = Shader::sourceFromFile("./res/sphere/line-fs.glsl");
-	//------------------------------------------------------------------------------------------------------
-	m_vertexShaderSourceImage = Shader::sourceFromFile("./res/sphere/image-vs.glsl");
-	m_geometryShaderSourceImage = Shader::sourceFromFile("./res/sphere/image-gs.glsl");
-	//------------------------------------------------------------------------------------------------------
-	m_fragmentShaderSourceBlur = Shader::sourceFromFile("./res/sphere/blur-fs.glsl");
-	//------------------------------------------------------------------------------------------------------
-	m_fragmentShaderSourceBlend = Shader::sourceFromFile("./res/sphere/blend-fs.glsl");
-	//------------------------------------------------------------------------------------------------------
 
-	m_vertexShaderTemplateLine = Shader::applyGlobalReplacements(m_vertexShaderSourceLine.get());
-	m_geometryShaderTemplateLine = Shader::applyGlobalReplacements(m_geometryShaderSourceLine.get());
-	m_fragmentShaderTemplateLine = Shader::applyGlobalReplacements(m_fragmentShaderSourceLine.get());
-	//------------------------------------------------------------------------------------------------------
-	m_vertexShaderTemplateImage = Shader::applyGlobalReplacements(m_vertexShaderSourceImage.get());
-	m_geometryShaderTemplateImage = Shader::applyGlobalReplacements(m_geometryShaderSourceImage.get());
-	//------------------------------------------------------------------------------------------------------
-	m_fragmentShaderTemplateBlur = Shader::applyGlobalReplacements(m_fragmentShaderSourceBlur.get());
-	//------------------------------------------------------------------------------------------------------
-	m_fragmentShaderTemplateBlend = Shader::applyGlobalReplacements(m_fragmentShaderSourceBlend.get());
-	//------------------------------------------------------------------------------------------------------
+	createShaderProgram("line", {
+	{ GL_VERTEX_SHADER,"./res/sphere/line-vs.glsl" },
+	{ GL_GEOMETRY_SHADER,"./res/sphere/line-gs.glsl" },
+	{ GL_FRAGMENT_SHADER,"./res/sphere/line-fs.glsl" },
+	},
+	{ "./res/sphere/globals.glsl" });
 
-	m_vertexShaderLine = Shader::create(GL_VERTEX_SHADER, m_vertexShaderTemplateLine.get());
-	m_geometryShaderLine = Shader::create(GL_GEOMETRY_SHADER, m_geometryShaderTemplateLine.get());
-	m_fragmentShaderLine = Shader::create(GL_FRAGMENT_SHADER, m_fragmentShaderTemplateLine.get());
-	//------------------------------------------------------------------------------------------------------
-	m_vertexShaderImage = Shader::create(GL_VERTEX_SHADER, m_vertexShaderTemplateImage.get());
-	m_geometryShaderImage = Shader::create(GL_GEOMETRY_SHADER, m_geometryShaderTemplateImage.get());
-	//------------------------------------------------------------------------------------------------------
-	m_fragmentShaderBlur = Shader::create(GL_FRAGMENT_SHADER, m_fragmentShaderTemplateBlur.get());
-	//------------------------------------------------------------------------------------------------------
-	m_fragmentShaderBlend= Shader::create(GL_FRAGMENT_SHADER, m_fragmentShaderTemplateBlend.get());
-	//------------------------------------------------------------------------------------------------------
+	createShaderProgram("blur", {
+		{ GL_VERTEX_SHADER,"./res/sphere/image-vs.glsl" },
+		{ GL_GEOMETRY_SHADER,"./res/sphere/image-gs.glsl" },
+		{ GL_FRAGMENT_SHADER,"./res/sphere/blur-fs.glsl" }
+		});
 
-	// Shader programs
-	m_programLine->attach(m_vertexShaderLine.get(), m_geometryShaderLine.get(), m_fragmentShaderLine.get());
-	m_programBlur->attach(m_vertexShaderImage.get(), m_geometryShaderImage.get(), m_fragmentShaderBlur.get());
-	m_programBlend->attach(m_vertexShaderImage.get(), m_geometryShaderImage.get(), m_fragmentShaderBlend.get());
+	createShaderProgram("blend", {
+		{ GL_VERTEX_SHADER,"./res/sphere/image-vs.glsl" },
+		{ GL_GEOMETRY_SHADER,"./res/sphere/image-gs.glsl" },
+		{ GL_FRAGMENT_SHADER,"./res/sphere/blend-fs.glsl" }
+		});
+
 
 	m_framebufferSize = viewer->viewportSize();
 
@@ -134,23 +111,6 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
 }
 
-std::list<globjects::File*> LineRenderer::shaderFiles() const
-{
-	return std::list<globjects::File*>({
-		m_shaderSourceGlobals.get(),
-
-		m_vertexShaderSourceLine.get(),
-		m_geometryShaderSourceLine.get(),
-		m_fragmentShaderSourceLine.get(),
-
-		m_vertexShaderSourceImage.get(),
-		m_geometryShaderSourceImage.get(),
-
-		m_fragmentShaderSourceBlur.get(),
-		m_fragmentShaderSourceBlend.get()
-		});
-}
-
 void LineRenderer::display()
 {
 	auto currentState = State::currentState();
@@ -181,6 +141,10 @@ void LineRenderer::display()
 	const mat3 normalMatrix = mat3(transpose(inverseModelViewMatrix));
 	const mat3 inverseNormalMatrix = inverse(normalMatrix);
 	const ivec2 viewportSize = viewer()->viewportSize();
+
+	auto programLine = shaderProgram("line");
+	auto programBlur = shaderProgram("blur");
+	auto programBlend = shaderProgram("blend");
 
 	vec4 worldLightPosition = inverseModelLightMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -498,16 +462,18 @@ void LineRenderer::display()
 
 	if (defines != m_shaderSourceDefines->string())
 	{
+		globjects::debug() << defines << std::endl;
 		m_shaderSourceDefines->setString(defines);
-
-		for (auto& s : shaderFiles())
-			s->reload();
+		reloadShaders();
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Line rendering pass and linked list generation
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+
+
+
 	m_lineFramebuffer->bind();
 
 	glClearDepth(1.0f);
@@ -546,40 +512,40 @@ void LineRenderer::display()
 	mat4 inverseModelTransform = inverse(modelTransform);
 	float scaledLineWidth = length(vec2(inverseModelViewProjectionMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f) - inverseModelViewProjectionMatrix *(vec4(m_lineWidth, 0.0f, 0.0f, 1.0f)))/ vec2(viewportSize) );
 
-	m_programLine->setUniform("modelViewProjectionMatrix", modelViewProjectionMatrix);
-	m_programLine->setUniform("inverseModelViewProjectionMatrix", inverseModelViewProjectionMatrix);
+	programLine->setUniform("modelViewProjectionMatrix", modelViewProjectionMatrix);
+	programLine->setUniform("inverseModelViewProjectionMatrix", inverseModelViewProjectionMatrix);
 
 
-	m_programLine->setUniform("xAxisScaling", m_xAxisScaling);
-	m_programLine->setUniform("yAxisScaling", m_yAxisScaling);
+	programLine->setUniform("xAxisScaling", m_xAxisScaling);
+	programLine->setUniform("yAxisScaling", m_yAxisScaling);
 
-	m_programLine->setUniform("lineWidth", scaledLineWidth);
-	m_programLine->setUniform("lineColor", viewer()->lineChartColor());
+	programLine->setUniform("lineWidth", scaledLineWidth);
+	programLine->setUniform("lineColor", viewer()->lineChartColor());
 
-	m_programLine->setUniform("viewportSize", vec2(viewportSize));
+	programLine->setUniform("viewportSize", vec2(viewportSize));
 
-	m_programLine->setUniform("haloColor", viewer()->haloColor());
-	m_programLine->setUniform("focusLineColor", viewer()->focusLineColor());
+	programLine->setUniform("haloColor", viewer()->haloColor());
+	programLine->setUniform("focusLineColor", viewer()->focusLineColor());
 
 	if (m_enableFocusLine) {
-		m_programLine->setUniform("focusLineID", m_focusLineID);
+		programLine->setUniform("focusLineID", m_focusLineID);
 	} else {
-		m_programLine->setUniform("focusLineID", -1);
+		programLine->setUniform("focusLineID", -1);
 	}
 
-	m_programLine->setUniform("lensPosition", m_lensPosition);
-	m_programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
-	m_programLine->setUniform("lensRadius", m_lensRadius);
+	programLine->setUniform("lensPosition", m_lensPosition);
+	programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
+	programLine->setUniform("lensRadius", m_lensRadius);
 	
-	m_programLine->setUniform("brushingAngle", m_brushingAngle);
-	m_programLine->setUniform("testSlider", m_testSlider);
+	programLine->setUniform("brushingAngle", m_brushingAngle);
+	programLine->setUniform("testSlider", m_testSlider);
 
 	m_vao->bind();
-	m_programLine->use();
+	programLine->use();
 
-	renderingStrategy->performRendering(m_programLine.get(), m_vao.get());
+	renderingStrategy->performRendering(programLine, m_vao.get());
 
-	m_programLine->release();
+	programLine->release();
 	m_vao->unbind();
 
 	//m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
@@ -608,8 +574,8 @@ void LineRenderer::display()
 
 
 	m_vaoQuad->bind();
-	m_programBlur->use();
-	m_programBlur->setUniform("blurTexture", 0);
+	programBlur->use();
+	programBlur->setUniform("blurTexture", 0);
 
 	m_depthTexture->bindActive(0);
 
@@ -620,7 +586,7 @@ void LineRenderer::display()
 
 	for (int i = 0; i < blutIterations; i++)
 	{
-		m_programBlur->setUniform("offset", blurOffset);
+		programBlur->setUniform("offset", blurOffset);
 		m_blurFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0 + (1 - blurIndex) });
 		m_vaoQuad->drawArrays(GL_POINTS, 0, 1);
 
@@ -630,7 +596,7 @@ void LineRenderer::display()
 		m_blurTexture[blurIndex]->bindActive(0);
 	}
 
-	m_programBlur->release();
+	programBlur->release();
 	m_vaoQuad->unbind();
 
 	glDepthMask(GL_TRUE);
@@ -665,22 +631,22 @@ void LineRenderer::display()
 	m_offsetTexture->bindActive(0);
 	m_blurTexture[blurIndex]->bindActive(1);
 
-	m_programBlend->setUniform("offsetTexture", 0);
-	m_programBlend->setUniform("blurTexture", 1);
+	programBlend->setUniform("offsetTexture", 0);
+	programBlend->setUniform("blurTexture", 1);
 
-	m_programBlend->setUniform("backgroundColor", viewer()->backgroundColor());
-	m_programBlend->setUniform("smoothness", m_smoothness);
+	programBlend->setUniform("backgroundColor", viewer()->backgroundColor());
+	programBlend->setUniform("smoothness", m_smoothness);
 
-	m_programBlend->setUniform("viewportSize", vec2(viewportSize));
-	m_programBlend->setUniform("lensPosition", m_lensPosition);
-	m_programBlend->setUniform("lensRadius", m_lensRadius);
-	m_programBlend->setUniform("lensBorderColor", viewer()->lensColor());
+	programBlend->setUniform("viewportSize", vec2(viewportSize));
+	programBlend->setUniform("lensPosition", m_lensPosition);
+	programBlend->setUniform("lensRadius", m_lensRadius);
+	programBlend->setUniform("lensBorderColor", viewer()->lensColor());
 
 	m_vaoQuad->bind();
 	
-	m_programBlend->use();
+	programBlend->use();
 	m_vaoQuad->drawArrays(GL_POINTS, 0, 1);
-	m_programBlend->release();
+	programBlend->release();
 	
 	m_vaoQuad->unbind();
 	

@@ -274,27 +274,12 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 		{
 			viewer->m_saveScreenshot = true;
 		}
-		else if (key == GLFW_KEY_F5 && action == GLFW_RELEASE)
+		if (key == GLFW_KEY_F5 && action == GLFW_RELEASE)
 		{
 			for (auto& r : viewer->m_renderers)
 			{
-				std::cout << "Reloading shaders for instance of " << typeid(*r.get()).name() << " ... " << std::endl;
-
-				for (auto& s : r->shaderFiles())
-				{
-					std::cout << "  " << s->shortInfo() << std::endl;
-					s->reload();
-				}
-				std::cout << r->shaderFiles().size() << " shaders reloaded." << std::endl << std::endl;
-
-				std::cout << "Reloading shaders for viewer << " << std::endl;
-				
-				// Crashes the program if not commented out, not sure what it does
-				// viewer->m_vertexShaderSourceUi->reload();
-				// viewer->m_fragmentShaderSourceUi->reload();
-
-				std::cout << "2 shaders reloaded." << std::endl << std::endl;
-
+				globjects::debug() << "Reloading shaders for instance of " << typeid(*r.get()).name() << " ... ";
+				r->reloadShaders();
 			}
 		}
 		else if (key == GLFW_KEY_F6 && action == GLFW_RELEASE)
