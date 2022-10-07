@@ -4,8 +4,9 @@
 /** The number of sides in the bounding polygon. Must be even. */
 #define N 4
 
+// Useless, but keeping it for now!
 #ifdef RS_LINKEDLIST
-layout(lines_adjacency) in;
+layout(lines) in;
 #else
 layout(lines) in;
 #endif
@@ -14,7 +15,11 @@ layout(triangle_strip, max_vertices = N) out;
 
 in vsData {
     float pointImportance;
+	vec3 prev;
+	vec3 next;
 } vsOut[];
+
+
 
 out vec4 gsFragmentPosition;
 out float gsFragmentImportance;
@@ -122,10 +127,10 @@ void main() {
 	// the implementation is taken from: https://blog.tammearu.eu/posts/gllines/
 
 
-    vec3 prev = gl_in[0].gl_Position.xyz;
-    vec3 start = gl_in[1].gl_Position.xyz;
-    vec3 end = gl_in[2].gl_Position.xyz;
-    vec3 next = gl_in[3].gl_Position.xyz;
+    vec3 prev = vsOut[0].prev;
+    vec3 start = gl_in[0].gl_Position.xyz;
+    vec3 end = gl_in[1].gl_Position.xyz;
+    vec3 next = vsOut[1].next;
 
 	// Displace (prev, start) and then (next, end)
 	float startImportance = lens(prev, start)*3;
@@ -218,8 +223,8 @@ void main() {
 	
 #ifdef RS_LINKEDLIST
 	gsFragmentDepth = 0.0f;
-	gsFragmentLayerLuminance = vsOut[1].pointImportance;
-	gsFragmentImportance = vsOut[1].pointImportance;
+	gsFragmentLayerLuminance = vsOut[0].pointImportance;
+	gsFragmentImportance = vsOut[0].pointImportance;
 
 	spawnPoint(vec4(start+startOffset+startLhs/startInvScale, 1.0),prev,start,end,next);
 #else
@@ -230,8 +235,8 @@ void main() {
 
 #ifdef RS_LINKEDLIST
 	gsFragmentDepth = 0.0f;
-	gsFragmentLayerLuminance = vsOut[1].pointImportance;
-	gsFragmentImportance = vsOut[1].pointImportance;
+	gsFragmentLayerLuminance = vsOut[0].pointImportance;
+	gsFragmentImportance = vsOut[0].pointImportance;
 
 	spawnPoint(vec4(start+startOffset-startLhs/startInvScale, 1.0),prev,start,end,next);
 #else
@@ -242,8 +247,8 @@ void main() {
 
 #ifdef RS_LINKEDLIST
 	gsFragmentDepth = 0.0f;
-	gsFragmentLayerLuminance = vsOut[2].pointImportance;
-	gsFragmentImportance = vsOut[2].pointImportance;
+	gsFragmentLayerLuminance = vsOut[1].pointImportance;
+	gsFragmentImportance = vsOut[1].pointImportance;
 
 	spawnPoint(vec4(end+endOffset+endLhs/endInvScale, 1.0),prev,start,end,next);
 #else
@@ -254,8 +259,8 @@ void main() {
 
 #ifdef RS_LINKEDLIST
 	gsFragmentDepth = 0.0f;
-	gsFragmentLayerLuminance = vsOut[2].pointImportance;
-	gsFragmentImportance = vsOut[2].pointImportance;
+	gsFragmentLayerLuminance = vsOut[1].pointImportance;
+	gsFragmentImportance = vsOut[1].pointImportance;
 
 	spawnPoint(vec4(end+endOffset-endLhs/endInvScale, 1.0),prev,start,end,next);
 #else

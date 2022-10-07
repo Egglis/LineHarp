@@ -12,12 +12,28 @@ LinkedListRendering::LinkedListRendering(TableData* data) : RenderingStrategy(da
 
 void LinkedListRendering::prepareDataBuffers() {
 
+	// Index for indexing vertices for drawElements...
+	int index = 0;
+
+
 	// fill buffers, our technique does not require a specific order or sorting
 	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
+
+		std::vector<GLuint> temp;
+		m_indices.push_back(temp);
 
 		for (int j = 0; j < m_dataTable->m_numberOfTimesteps.at(i); j++) {
 			m_activeXColumn.push_back(m_dataTable->m_XTrajectories.at(i).at(j));
 			m_activeYColumn.push_back(m_dataTable->m_YTrajectories.at(i).at(j));
+			
+			// End for line or data is only drawn once.
+			if (j == 0 || j == m_dataTable->m_numberOfTimesteps.at(i)-1){
+				m_indices.at(i).push_back(index);
+			} else {
+				m_indices.at(i).push_back(index);
+				m_indices.at(i).push_back(index);
+			}
+			index += 1;
 		}
 	}
 }
@@ -454,8 +470,12 @@ void LinkedListRendering::performRendering(globjects::Program* p, globjects::Ver
 
 		p->setUniform("numberOfTimesteps", m_dataTable->m_numberOfTimesteps[i]);
 		p->setUniform("trajectoryID", i);
+		va->drawElements(GL_PATCHES,
+			m_indices.at(i).size(),
+			GL_UNSIGNED_INT,
+			reinterpret_cast<void*>(m_indices.at(i).data()));
+		// Old method va->drawArrays(GL_PATCHES, firstIndex, m_dataTable->m_numberOfTimesteps[i]);
 
-		va->drawArrays(GL_LINE_STRIP_ADJACENCY, firstIndex, m_dataTable->m_numberOfTimesteps[i]);
 		firstIndex += m_dataTable->m_numberOfTimesteps[i];
 	}
 }

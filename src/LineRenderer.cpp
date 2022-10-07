@@ -46,6 +46,8 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 
 	createShaderProgram("line", {
 	{ GL_VERTEX_SHADER,"./res/sphere/line-vs.glsl" },
+	{ GL_TESS_CONTROL_SHADER, "./res/sphere/line-tcs.glsl"},
+	{ GL_TESS_EVALUATION_SHADER, "./res/sphere/line-tes.glsl"},
 	{ GL_GEOMETRY_SHADER,"./res/sphere/line-gs.glsl" },
 	{ GL_FRAGMENT_SHADER,"./res/sphere/line-fs.glsl" },
 	},
@@ -541,8 +543,9 @@ void LineRenderer::display()
 	programLine->setUniform("testSlider", m_testSlider);
 
 	m_vao->bind();
-	programLine->use();
+	glPatchParameteri(GL_PATCH_VERTICES, 2);
 
+	programLine->use();
 	renderingStrategy->performRendering(programLine, m_vao.get());
 
 	programLine->release();

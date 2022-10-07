@@ -1,6 +1,8 @@
 #pragma once
 #include "RenderingStrategy.h"
 
+using namespace gl;
+
 namespace lineweaver
 {
 	class LinkedListRendering : public RenderingStrategy {
@@ -15,6 +17,8 @@ namespace lineweaver
 
 		void performRendering(globjects::Program* p, globjects::VertexArray* va);
 		void weaveSeries(const TableData& table);
-
+	private:
+		std::vector<std::vector<GLuint>> m_indices;
 	};
+	
 }

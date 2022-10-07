@@ -198,7 +198,7 @@ void main()
 	
 	float opacity = lineOutline;
 	lineChartTexture.rgb = finalColor*opacity;
-	// lineChartTexture.rgb = vec3(1,0,0)*(1.0f-pxlDistance/lensRadius);
+	//lineChartTexture.rgb = vec3(1,0,0)*(1.0f-pxlDistance/lensRadius);
 	lineChartTexture.a = opacity;
 
 #ifdef LINE_HALOS
