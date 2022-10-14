@@ -144,6 +144,13 @@ void LineRenderer::display()
 	const mat3 inverseNormalMatrix = inverse(normalMatrix);
 	const ivec2 viewportSize = viewer()->viewportSize();
 
+	/*
+	globjects::debug() << inverseModelViewProjectionMatrix[0][0] << "," << inverseModelViewProjectionMatrix[0][1] << "," << inverseModelViewProjectionMatrix[0][2] << std::endl;
+	globjects::debug() << inverseModelViewProjectionMatrix[1][0] << "," << inverseModelViewProjectionMatrix[1][1] << "," << inverseModelViewProjectionMatrix[1][2] << std::endl;
+	globjects::debug() << inverseModelViewProjectionMatrix[2][0] << "," << inverseModelViewProjectionMatrix[2][1] << "," << inverseModelViewProjectionMatrix[2][2] << std::endl;
+	globjects::debug() << "---" << std::endl;
+	*/
+
 	auto programLine = shaderProgram("line");
 	auto programBlur = shaderProgram("blur");
 	auto programBlend = shaderProgram("blend");
@@ -423,6 +430,8 @@ void LineRenderer::display()
 	if (m_enableAngularBrush)
 		defines += "#define ANGULAR_BRUSHING\n";
 
+
+
 	if (m_easeFunctionID == 0)
 		defines += "#define EASE_LINEAR\n";
 	else if (m_easeFunctionID == 1)
@@ -538,7 +547,9 @@ void LineRenderer::display()
 	programLine->setUniform("lensPosition", m_lensPosition);
 	programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
 	programLine->setUniform("lensRadius", m_lensRadius);
-	
+	programLine->setUniform("viewMatrix", viewMatrix);
+	programLine->setUniform("inverseViewMatrix", inverseViewMatrix);
+
 	programLine->setUniform("brushingAngle", m_brushingAngle);
 	programLine->setUniform("testSlider", m_testSlider);
 
