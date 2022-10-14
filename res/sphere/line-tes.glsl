@@ -12,7 +12,7 @@ out vsData {
 	vec3 next;
 } vsOut;
 
-
+// In progress uniforms and not all are used yet.
 uniform float xAxisScaling;
 uniform float yAxisScaling;
 uniform float testSlider;
@@ -24,6 +24,7 @@ uniform mat4 inverseModelViewProjectionMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 inverseViewMatrix;
 
+// From: https://computeranimations.wordpress.com/2015/03/16/rasterization-of-parametric-curves-using-tessellation-shaders-in-glsl/
 vec3 bezier(float u, vec3 p0, vec3 p1, vec3 p2, vec3 p3)
 {
 	float B0 = (1.-u)*(1.-u)*(1.-u);
@@ -74,13 +75,15 @@ vec3 bezierDisplacment(vec3 cp) {
 
 	float dl = distance(lPos, MPoint.xy);
 	if(dl <= lensRadius) {
+
+
 		vec2 dir = normalize(vec2(MPoint.x - lPos.x, MPoint.y - lPos.y));
 
 		float zoomIntensity = 1;
 		float x = dl/lensRadius;
 		float scaling = zoomIntensity*cos(3.1415 + x*2*3.1415)+zoomIntensity;
 
-
+		// Should help scale the displacment based on the real life radius and not the float value
 		float pxlRadius = lensRadius*inverseModelViewProjectionMatrix[1].y;
 		return vec3(dir, 0)*pxlRadius/2*scaling;
 	}
@@ -93,6 +96,9 @@ vec3 bezierLens(vec3 p0, vec3 p3, float u){
 	
 	vec3 cp0 = p0;
 	vec3 cp3 = p3;
+
+	// The extra control point are generated along the line at 1/3 and 2/3
+	// Should maybe be generated based on the actual lens location somehow
 	vec3 cp1 = mix(p0, p3, 0.33);
 	vec3 cp2 = mix(p0, p3, 0.66);
 
@@ -124,12 +130,6 @@ void main(){
 	vec3 p0 = vec3(gl_in[0].gl_Position);
 	vec3 p3 = vec3(gl_in[1].gl_Position);
 
-	// Construct 2 extra control points|
-	vec3 p1 = vec3(mix(p0.x, p3.x, 1/3), mix(p0.y, p3.y, 1/3), 0);
-	vec3 p2 = vec3(mix(p0.x, p3.x, 2/3), mix(p0.y, p3.y, 2/3), 0);
-
-	// Check for displacment
-
 	// Normalized length between segments
 	float du = 1/num_points;
 
@@ -144,7 +144,8 @@ void main(){
 	gl_Position = vec4(bezierLens(p0, p3, u) , 1);
 	*/
 	
-	
+	// Prev and next for each vertex are interpolated based on where we think the next line will go
+	// Not ideal and dont seem to work proprely
 	vsOut.prev = lens(p0,p3,u-du);
 	vsOut.next = lens(p0,p3,u+du);
 
