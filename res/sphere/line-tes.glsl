@@ -17,8 +17,108 @@ out vsData {
 
 } vsOut;
 
-patch in vec4 pp0;
-patch in vec4 pp3;
+
+uniform float xAxisScaling;
+uniform float yAxisScaling;
+uniform float testSlider;
+uniform vec2 lensPosition;
+uniform float lensRadius;
+uniform vec2 viewportSize;
+uniform mat4 modelViewProjectionMatrix;
+uniform mat4 inverseModelViewProjectionMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 inverseViewMatrix;
+
+vec3 bezier(float u, vec3 p0, vec3 p1, vec3 p2, vec3 p3)
+{
+	float B0 = (1.-u)*(1.-u)*(1.-u);
+	float B1 = 3.*u*(1.-u)*(1.-u);
+	float B2 = 3.*u*u*(1.-u);
+	float B3 = u*u*u;
+
+	vec3 p = B0*p0 + B1*p1 + B2*p2 + B3*p3;
+	return p;
+} 
+
+// Same solution as previously only now it effect all the "generated" vertexes as well
+vec3 lens(vec3 p0, vec3 p3, float u){
+
+	float aspectRatio = viewportSize.x/viewportSize.y;
+	vec2 lPos = lensPosition;
+	lPos.x *= aspectRatio;
+
+	vec3 currPoint = mix(p0, p3, u);
+	vec4 MPoint = modelViewProjectionMatrix*vec4(currPoint, 1);
+	MPoint.x *= aspectRatio;
+
+	float dl = distance(lPos, MPoint.xy);
+
+	if (dl <= lensRadius) {
+		vec2 dir = normalize(vec2(MPoint.x - lPos.x, MPoint.y - lPos.y));
+
+		
+		float zoomIntensity = 1;
+		float x = dl/lensRadius;
+		float scaling = zoomIntensity*cos(3.1415 + x*2*3.1415)+zoomIntensity;
+		
+		return currPoint+vec3(dir*scaling*testSlider, 0);
+
+	}
+	return mix(p0, p3, u);
+}
+
+
+vec3 bezierDisplacment(vec3 cp) {
+
+	float aspectRatio = viewportSize.x/viewportSize.y;
+	vec2 lPos = lensPosition;
+	lPos.x *= aspectRatio;
+
+	vec4 MPoint = modelViewProjectionMatrix*vec4(cp, 1);
+	MPoint.x *= aspectRatio;
+
+	float dl = distance(lPos, MPoint.xy);
+	if(dl <= lensRadius) {
+		vec2 dir = normalize(vec2(MPoint.x - lPos.x, MPoint.y - lPos.y));
+
+		float zoomIntensity = 1;
+		float x = dl/lensRadius;
+		float scaling = zoomIntensity*cos(3.1415 + x*2*3.1415)+zoomIntensity;
+
+
+		float pxlRadius = lensRadius*inverseModelViewProjectionMatrix[1].y;
+		return vec3(dir, 0)*pxlRadius/2*scaling;
+	}
+
+	return vec3(0);
+}
+
+
+vec3 bezierLens(vec3 p0, vec3 p3, float u){
+	
+	vec3 cp0 = p0;
+	vec3 cp3 = p3;
+	vec3 cp1 = mix(p0, p3, 0.33);
+	vec3 cp2 = mix(p0, p3, 0.66);
+
+
+	cp0 += bezierDisplacment(cp0);
+	cp3 += bezierDisplacment(cp3);
+
+	cp1 += bezierDisplacment(cp1);
+	cp2 += bezierDisplacment(cp2);
+
+
+
+	return bezier(u, cp0, cp1, cp2, cp3);
+}
+
+
+
+void main(){
+	// Move to globals.glsl or similar
+	int num_points = 16;
+
 
 uniform float testSlider;
 uniform vec2 viewportSize;
@@ -144,56 +244,38 @@ it will always be within the radius
 void defaultMode(){
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
+	
+	vsOut.pointImportance = mix(tessOut[0].pointImportance, tessOut[1].pointImportance, u);
 
-	vec4 p0 = pp0;
-	vec4 p1 = gl_in[0].gl_Position;
-	vec4 p2 = gl_in[1].gl_Position;
-	vec4 p3 = pp3;
+	// Initial start and end
+	vec3 p0 = vec3(gl_in[0].gl_Position);
+	vec3 p3 = vec3(gl_in[1].gl_Position);
 
+	// Construct 2 extra control points|
+	vec3 p1 = vec3(mix(p0.x, p3.x, 1/3), mix(p0.y, p3.y, 1/3), 0);
+	vec3 p2 = vec3(mix(p0.x, p3.x, 2/3), mix(p0.y, p3.y, 2/3), 0);
 
-	// Importance is interpolated
-	vsOut.pointImportance = mix(tessOut[0].pointImportance, tessOut[0].pointImportance, u);
+	// Check for displacment
 
-	// du: delimiter, t0, t1, t2 (previous, current, next) t-values 
-	float du = 1.0f/(16.0f);
-	float t0 = u-du;
-	float t1 = u;
-	float t2 = u+du;
+	// Normalized length between segments
+	float du = 1/num_points;
 
-	vec4 prev_pos, pos, next_pos;
+	vec3 prev;
+	vec3 next;
+	
+	/*
+	// Bezier
+	vsOut.prev = bezierLens(p0,p3,u-du);
+	vsOut.next = bezierLens(p0,p3,u+du);
 
-	// Current Position
-	pos = mix(p1, p2, t1);
+	gl_Position = vec4(bezierLens(p0, p3, u) , 1);
+	*/
+	
+	
+	vsOut.prev = lens(p0,p3,u-du);
+	vsOut.next = lens(p0,p3,u+du);
 
-	// Used to detect end points for diffirent next, and prev (TODO not working)
-	if(u < 0){
-		prev_pos = p1;
-		disp(prev_pos, p0, p1);
-	} else {
-		prev_pos = mix(p1, p2, t0);
-		disp(prev_pos, p1, p2);
-	}
-
-	if(u > 1){
-		next_pos = p3;
-		disp(next_pos, p2, p3);
-	} else {
-		next_pos = mix(p1, p2, t2);
-		disp(next_pos, p1, p2);
-
-	}
-
-
-	disp(pos, p1, p2);
-
-	vsOut.prev = prev_pos.xy;
-	vsOut.next = next_pos.xy;
-
-	gl_Position = pos;
-
-}
-
-void main(){
-
-	defaultMode();
+	gl_Position = vec4(lens(p0, p3, u) , 1);
+	
+	
 }

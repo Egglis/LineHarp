@@ -26,10 +26,8 @@ void main(){
 	gl_TessLevelOuter[1] = NR_POINTS;
     tessOut[gl_InvocationID].tDiff = 1.0f/NR_POINTS;
 
-	// Should do interpolation between 0-1 to find point importance of "new" vertecies
-	// tessOut[gl_InvocationID].pointImportance = vsOut[gl_InvocationID].pointImportance;
 	tessOut[gl_InvocationID].pointImportance = vsOut[gl_InvocationID].pointImportance;
-	//tessOut[gl_InvocationID].pointImportance = vsOut[gl_InvocationID].pointImportance;
+
 
 	if(gl_InvocationID == 0) {
                 gl_TessLevelOuter[0] = float(1);
