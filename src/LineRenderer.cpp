@@ -543,7 +543,7 @@ void LineRenderer::display()
 	programLine->setUniform("testSlider", m_testSlider);
 
 	m_vao->bind();
-	glPatchParameteri(GL_PATCH_VERTICES, 2);
+	glPatchParameteri(GL_PATCH_VERTICES, 4);
 
 	programLine->use();
 	renderingStrategy->performRendering(programLine, m_vao.get());

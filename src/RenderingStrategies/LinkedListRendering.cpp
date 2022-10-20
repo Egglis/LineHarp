@@ -13,28 +13,49 @@ LinkedListRendering::LinkedListRendering(TableData* data) : RenderingStrategy(da
 void LinkedListRendering::prepareDataBuffers() {
 
 	// Index for indexing vertices for drawElements...
-	int index = 0;
-
+	int point = 0;
+	bool indices_stored = false;
 
 	// fill buffers, our technique does not require a specific order or sorting
 	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
 
 		std::vector<GLuint> temp;
 		m_indices.push_back(temp);
+		indices_stored = false;
+
 
 		for (int j = 0; j < m_dataTable->m_numberOfTimesteps.at(i); j++) {
 			m_activeXColumn.push_back(m_dataTable->m_XTrajectories.at(i).at(j));
 			m_activeYColumn.push_back(m_dataTable->m_YTrajectories.at(i).at(j));
-			
-			// End for line or data is only drawn once.
-			if (j == 0 || j == m_dataTable->m_numberOfTimesteps.at(i)-1){
-				m_indices.at(i).push_back(index);
-			} else {
-				m_indices.at(i).push_back(index);
-				m_indices.at(i).push_back(index);
+			/*
+				i : 0 - n
+				j : 0 - n
+				index : j++ i:j
+
+				if j is dividable by 4, it means that there is no need for extra indices
+				e.x of not dividable by 4, x need to be filled in with the previous index instead
+				(0,1,2,3) (1,2,3,?)
+
+			*/
+
+			// If the next three point does not exist we terminted the indices for loop for now
+			if (point + 3 > (i+1) * m_dataTable->m_numberOfTimesteps.at(i)-1){
+				indices_stored = true;
 			}
-			index += 1;
+
+			// Add the next 3 points for each point
+			if (!indices_stored) {
+				for (int x = point; x <= point + 3; x++) {
+					m_indices.at(i).push_back(x);
+				}
+			}
+
+			point += 1;
+
 		}
+
+		
+
 	}
 }
 
@@ -470,11 +491,12 @@ void LinkedListRendering::performRendering(globjects::Program* p, globjects::Ver
 
 		p->setUniform("numberOfTimesteps", m_dataTable->m_numberOfTimesteps[i]);
 		p->setUniform("trajectoryID", i);
+		// globjects::debug() << m_indices.at(i) << std::endl;
 		va->drawElements(GL_PATCHES,
 			m_indices.at(i).size(),
 			GL_UNSIGNED_INT,
 			reinterpret_cast<void*>(m_indices.at(i).data()));
-		// Old method va->drawArrays(GL_PATCHES, firstIndex, m_dataTable->m_numberOfTimesteps[i]);
+		// va->drawArrays(GL_PATCHES, firstIndex, m_dataTable->m_numberOfTimesteps[i]);
 
 		firstIndex += m_dataTable->m_numberOfTimesteps[i];
 	}
