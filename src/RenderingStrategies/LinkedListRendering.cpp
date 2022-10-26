@@ -9,55 +9,54 @@ LinkedListRendering::LinkedListRendering(TableData* data) : RenderingStrategy(da
 
 }
 
-
 void LinkedListRendering::prepareDataBuffers() {
 
-	// Index for indexing vertices for drawElements...
-	int point = 0;
-	bool indices_stored = false;
+
 
 	// fill buffers, our technique does not require a specific order or sorting
-	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
-
-		std::vector<GLuint> temp;
-		m_indices.push_back(temp);
-		indices_stored = false;
-
+	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {		
 
 		for (int j = 0; j < m_dataTable->m_numberOfTimesteps.at(i); j++) {
 			m_activeXColumn.push_back(m_dataTable->m_XTrajectories.at(i).at(j));
 			m_activeYColumn.push_back(m_dataTable->m_YTrajectories.at(i).at(j));
-			/*
-				i : 0 - n
-				j : 0 - n
-				index : j++ i:j
+			
+		}
+	}
+	prepareIndicesBuffer();
+}
 
-				if j is dividable by 4, it means that there is no need for extra indices
-				e.x of not dividable by 4, x need to be filled in with the previous index instead
-				(0,1,2,3) (1,2,3,?)
+/* fill m_indices with the correct index order for drawing:
+* i.e Vertecies [1,2,3,4,5] = (1,2,3,4),(2,3,4,5),(3,4,5,5)
+*/
+void lineweaver::LinkedListRendering::prepareIndicesBuffer()
+{
 
-			*/
+	int index = 0;
+	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
 
-			// If the next three point does not exist we terminted the indices for loop for now
-			if (point + 3 > (i+1) * m_dataTable->m_numberOfTimesteps.at(i)-1){
-				indices_stored = true;
-			}
 
-			// Add the next 3 points for each point
-			if (!indices_stored) {
-				for (int x = point; x <= point + 3; x++) {
+		std::vector<GLuint> temp;
+		m_indices.push_back(temp);
+
+
+		for (int j = 0; j < m_dataTable->m_numberOfTimesteps.at(i) - 3; j++) {
+
+			const int max = (i + 1) * m_dataTable->m_numberOfTimesteps.at(i) - 1;
+			for (int x = index; x <= index + 3; x++) {
+				if (x >= max) {
+					m_indices.at(i).push_back(max-1);
+				}
+				else {
 					m_indices.at(i).push_back(x);
 				}
 			}
-
-			point += 1;
+			index += 1;
 
 		}
-
-		
-
+		index += 3;
 	}
 }
+
 
 // fill the importance buffer using a data dependent metric
 void LinkedListRendering::prepareImportanceBuffer() {
@@ -135,6 +134,8 @@ void LinkedListRendering::prepareImportanceBuffer(TableImportance* importance) {
 		}
 	}
 }
+
+
 
 // check if a point is on the LEFT side of an edge
 bool inside(vec2 p, vec2 p1, vec2 p2)
@@ -482,13 +483,13 @@ void LinkedListRendering::weaveSeries(const TableData& table)
 
 }
 
+
 void LinkedListRendering::performRendering(globjects::Program* p, globjects::VertexArray* va) {
 
 	int firstIndex = 0;
 
 	// render line segments exactly as they are stored in buffer
 	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
-
 		p->setUniform("numberOfTimesteps", m_dataTable->m_numberOfTimesteps[i]);
 		p->setUniform("trajectoryID", i);
 		// globjects::debug() << m_indices.at(i) << std::endl;

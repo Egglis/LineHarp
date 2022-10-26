@@ -1,6 +1,6 @@
 #version 450
 
-#define NR_POINTS 8
+#define NR_POINTS 4
 
 layout (vertices = 2) out;
 
@@ -10,15 +10,19 @@ in vsData {
 
 out tessVsData {
 	float pointImportance;
+    float tDiff;
 } tessOut[];
 
-patch out vec4 p0;
-patch out vec4 p3;
+patch out vec4 pp0;
+patch out vec4 pp3;
+
+
 
 void main(){
 
 	gl_TessLevelOuter[0] = 1;
 	gl_TessLevelOuter[1] = NR_POINTS;
+    tessOut[gl_InvocationID].tDiff = 1.0f/NR_POINTS;
 
 	// Should do interpolation between 0-1 to find point importance of "new" vertecies
 	// tessOut[gl_InvocationID].pointImportance = vsOut[gl_InvocationID].pointImportance;
@@ -29,8 +33,8 @@ void main(){
                 gl_TessLevelOuter[0] = float(1);
                 gl_TessLevelOuter[1] = float(16);
 
-                p0 = gl_in[0].gl_Position;
-                p3 = gl_in[3].gl_Position;
+                pp0 = gl_in[0].gl_Position;
+                pp3 = gl_in[3].gl_Position;
         }
 
         if(gl_InvocationID == 0) {

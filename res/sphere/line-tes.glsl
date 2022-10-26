@@ -4,72 +4,88 @@ layout (isolines, equal_spacing) in;
 
 in tessVsData {
 	float pointImportance;
+	float tDiff;
 } tessOut[];
 
 out vsData {
 	float pointImportance;
-	vec3 prev;
-	vec3 next;
-	vec4 up;
-	vec4 down;
+	vec2 prev;
+	vec2 next;
 
 } vsOut;
 
-patch in vec4 p0;
-patch in vec4 p3;
+patch in vec4 pp0;
+patch in vec4 pp3;
 
-uniform float lineWidth;
+uniform float testSlider;
+uniform vec2 viewportSize;
+
 
 vec4 catmull(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float u ){
-	float b0 = (-1.f * u) + (2.f * u * u) + (-1.f * u * u * u);
-	float b1 = (2.f) + (-5.f * u * u) + (3.f * u * u * u);
-	float b2 = (u) + (4.f * u * u) + (-3.f * u * u * u);
-	float b3 = (-1.f * u * u) + (u * u * u);
-	float m = 0.5f;
-	vec4 new_pos = m * (b0*p0 + b1*p1 + b2*p2 + b3*p3);
-	
-	float b0_d = -1.f + 4 * u - 3 * u*u;
-	float b1_d = 9 * u*u - 10*  u;
-	float b2_d = 1 + 8 * u - 9 * u*u;
-	float b3_d = -2 * u + 3 * u*u;
 
-	vec4 tangent = normalize(b0_d*p0 + b1_d*p1 + b2_d*p2 + b3_d*p3);
-	vec3 up = vec3(1, 0, 0);
-	vec3 normal = cross(up, tangent.xyz);
+	float alpha = 1.0;
+    float tension = 0.0;
+    
+    float t01 = pow(distance(p0, p1), alpha);
+	float t12 = pow(distance(p1, p2), alpha);
+	float t23 = pow(distance(p2, p3), alpha);
 
-	vsOut.up = new_pos ;
-	vsOut.down = new_pos + vec4(1,0,0,1);
+	vec2 m1 = (1.0f - tension) *
+    	(p2.xy - p1.xy + t12 * ((p1.xy - p0.xy) / t01 - (p2.xy - p0.xy) / (t01 + t12)));
+	vec2 m2 = (1.0f - tension) *
+    	(p2.xy - p1.xy + t12 * ((p3.xy - p2.xy) / t23 - (p3.xy - p1.xy) / (t12 + t23)));
+    
+	vec2 a = 2.0f * (p1.xy - p2.xy) + m1 + m2;
+	vec2 b = -3.0f * (p1.xy - p2.xy)  - m1 - m1 - m2;
+	vec2 c = m1;
+	vec2 d = p1.xy;
 
-	vsOut.up.z = 0;
-	vsOut.down.z = 0;
+	vec2 new_pos =  (a * u * u * u) + (b * u * u) + (c * u) + (d);
 
-	return vec4(new_pos.x, new_pos.y, 0, 1);
+	return vec4(new_pos, 0, 1);
+
+}
+
+vec4 straightline(float u){
+        vec4 p0 = gl_in[0].gl_Position;
+        vec4 p1 = gl_in[1].gl_Position;
+
+        float slope = (p1.y - p0.y) / (p1.x - p0.x);
+        float x = ((p1.x - p0.x) * u) + p0.x;
+        float y = (u * slope * (p1.x - p0.x)) + p0.y;
+
+        return vec4(x, y, 0, 1);
+
 }
 
 void main(){
 
-	vsOut.prev = p0.xyz;
-	vsOut.next = p3.xyz;
-
+	
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
 
-	float du = u/16;
-
+	vec4 p0 = pp0;
 	vec4 p1 = gl_in[0].gl_Position;
 	vec4 p2 = gl_in[1].gl_Position;
+	vec4 p3 = pp3;
 
-    float slope = (p2.y - p1.y) / (p2.x - p1.x);
-    float x = ((p2.x - p1.x) * u) + p1.x;
-    float y = (u * slope * (p2.x - p1.x)) + p1.y;
-	
+
 	// Importance is interpolated
 	vsOut.pointImportance = mix(tessOut[0].pointImportance, tessOut[0].pointImportance, u);
 
-	vsOut.prev = catmull(p0, p1, p2, p3, u).xyz;
-	vsOut.next = catmull(p0, p1, p2, p3, u).xyz;
+	float du = 1.0f/16;
+	float t0 = u-du;
+	float t1 = u;
+	float t2 = u+du;
 
-    gl_Position = catmull(p0, p1, p2, p3, u);
+	vec4 prev_pos = catmull(p0, p1, p2, p3, t0);
+	vec4 pos = catmull(p0, p1, p2, p3, t1);
+	vec4 next_pos = catmull(p0, p1, p2, p3, t2);
+	
+	vsOut.prev = prev_pos.xy;
+	vsOut.next = next_pos.xy;
+
+    gl_Position = pos;
 
 
 }

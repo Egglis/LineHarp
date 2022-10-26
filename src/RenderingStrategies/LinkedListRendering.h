@@ -15,10 +15,12 @@ namespace lineweaver
 		void prepareImportanceBuffer();
 		void prepareImportanceBuffer(TableImportance* importance);
 
+
 		void performRendering(globjects::Program* p, globjects::VertexArray* va);
 		void weaveSeries(const TableData& table);
 	private:
 		std::vector<std::vector<GLuint>> m_indices;
+		void prepareIndicesBuffer();
 	};
 	
 }

@@ -544,12 +544,16 @@ void LineRenderer::display()
 
 	m_vao->bind();
 	glPatchParameteri(GL_PATCH_VERTICES, 4);
+	//glPolygonMode(GL_FRONT, GL_LINE);
 
 	programLine->use();
 	renderingStrategy->performRendering(programLine, m_vao.get());
 
 	programLine->release();
 	m_vao->unbind();
+
+	// glPolygonMode(GL_FRONT, GL_FILL);
+
 
 	//m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 
