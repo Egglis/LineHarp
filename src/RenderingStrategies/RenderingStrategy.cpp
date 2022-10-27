@@ -18,6 +18,8 @@ std::vector<float>& RenderingStrategy::activeImportance() {
 	return m_activeImportance;
 }
 
+
+
 // fill the zipped vector with pairs consisting of the corresponding elements of a and b. (This assumes that the vectors have equal length)
 // source: https://stackoverflow.com/questions/37368787/c-sort-one-vector-based-on-another-one
 void RenderingStrategy::zip(const std::vector<float> &a, const std::vector<int> &b, std::vector<std::pair<float, int>> &zipped) {

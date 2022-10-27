@@ -56,7 +56,7 @@ uniform int numberOfTimesteps;
 void spawnPoint(vec4 S, vec3 prev, vec3 start, vec3 end, vec3 next){
 	float aspectRatio = viewportSize.x/viewportSize.y;
 
-	gsFragmentPosition = modelViewProjectionMatrix * S;
+	gsFragmentPosition = S;
 
 	// Sets the fragment position
 	gl_Position = gsFragmentPosition;
@@ -64,14 +64,14 @@ void spawnPoint(vec4 S, vec3 prev, vec3 start, vec3 end, vec3 next){
 #ifdef RS_LINKEDLIST
 
 	// Only used in the fragment shader
-	gsPrev = modelViewProjectionMatrix * vec4(prev,1);
-	gsStart = modelViewProjectionMatrix * vec4(start,1);
-	gsEnd = modelViewProjectionMatrix * vec4(end,1);
-	gsNext = modelViewProjectionMatrix * vec4(next,1);
+	gsPrev = vec4(prev,1);
+	gsStart = vec4(start,1);
+	gsEnd = vec4(end,1);
+	gsNext = vec4(next,1);
 
 #else
-	gsStart = modelViewProjectionMatrix * gl_in[0].gl_Position;
-	gsEnd = modelViewProjectionMatrix * gl_in[1].gl_Position;    
+	gsStart = gl_in[0].gl_Position;
+	gsEnd = gl_in[1].gl_Position;    
 #endif
 	
 	// compute line width in fragment coordinates
@@ -103,6 +103,7 @@ float lens(inout vec3 a, inout vec3 b) {
 	if (dl <= lensRadius && dl > 0) {
 		
 		// Compute displacment direction
+
 		vec2 dir = normalize(vec2(Ma.x - lPos.x, Ma.y - lPos.y));
 
 		// Scaling is done with a cos function
@@ -128,7 +129,7 @@ void spawnPoint(vec4 point, int index) {
 	gsFragmentImportance = vsOut[index].pointImportance;
 
 
-	gsFragmentPosition = modelViewProjectionMatrix * point;
+	gsFragmentPosition = point;
 	gl_Position = gsFragmentPosition;
 
 	// compute line width in fragment coordinates
@@ -145,7 +146,7 @@ void spawnPoint(vec4 point, int index) {
 void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
 	gsFragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
 		
-	// consider the current aspect ratio to make sure all halos have equal width
+	// consider the current aspect ratio to make sure all shalos have equal width
 	float aspectRatio = viewportSize.x/viewportSize.y;
 	gsFragmentLineWidth *= aspectRatio;	
 
@@ -236,10 +237,10 @@ void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
 
 void main() {
 
-	gsPrev = modelViewProjectionMatrix * vec4(vsOut[0].prev, 0, 1);
-	gsStart = modelViewProjectionMatrix * gl_in[0].gl_Position;
-	gsEnd = modelViewProjectionMatrix * gl_in[1].gl_Position;
-	gsNext = modelViewProjectionMatrix * vec4(vsOut[1].next, 0, 1);
+	gsPrev = vec4(vsOut[0].prev, 0, 1);
+	gsStart = gl_in[0].gl_Position;
+	gsEnd =  gl_in[1].gl_Position;
+	gsNext = vec4(vsOut[1].next, 0, 1);
 
 
 	constructSegment(vsOut[0].prev, gl_in[0].gl_Position.xy, gl_in[1].gl_Position.xy, vsOut[1].next);
