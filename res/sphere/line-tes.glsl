@@ -111,8 +111,17 @@ float leftOrRight(vec4 a, vec4 b){
 // Displace a point by normal of the line it is from based on left or right of the line:
 vec4 disp(vec4 pos, vec4 a, vec4 b) {
 
+	vec2 dir = pos.xy - lensPosition;
+	float dist = distanceToLens(pos).z;
+	vec2 normDir = normalize(dir);
 
+	float weight = 1.0-smoothstep(0.0, testSlider*lensRadius, dist);
+	
+	vec4 newPos = pos;
+	newPos.xy += weight * (normDir/viewportSize)*64.0;
+	return newPos;
 
+/*
 	vec3 dl = distanceToLens(pos);
 	vec2 dir = dl.xy;
 	float dist = dl.z;
@@ -141,7 +150,7 @@ vec4 disp(vec4 pos, vec4 a, vec4 b) {
 		// return pos += vec4(testSlider*dir*(easeInOut(t)), 0, 0);
 	}
 	return pos;
-
+	*/
 }
 
 
