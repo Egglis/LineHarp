@@ -24,6 +24,8 @@ in vsData {
     float pointImportance;
 	vec2 prev;
 	vec2 next;
+    bool firstVertex;
+
 } vsOut[];
 
 
@@ -52,74 +54,6 @@ uniform vec2 viewportSize;
 
 uniform int numberOfTrajectories;
 uniform int numberOfTimesteps;
-
-void spawnPoint(vec4 S, vec3 prev, vec3 start, vec3 end, vec3 next){
-	float aspectRatio = viewportSize.x/viewportSize.y;
-
-	gsFragmentPosition = S;
-
-	// Sets the fragment position
-	gl_Position = gsFragmentPosition;
-	
-#ifdef RS_LINKEDLIST
-
-	// Only used in the fragment shader
-	gsPrev = vec4(prev,1);
-	gsStart = vec4(start,1);
-	gsEnd = vec4(end,1);
-	gsNext = vec4(next,1);
-
-#else
-	gsStart = gl_in[0].gl_Position;
-	gsEnd = gl_in[1].gl_Position;    
-#endif
-	
-	// compute line width in fragment coordinates
-	gsFragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
-		
-	// consider the current aspect ratio to make sure all halos have equal width
-	gsFragmentLineWidth *= aspectRatio;	
-
-
-	EmitVertex();
-}
-
-
-float lens(inout vec3 a, inout vec3 b) {
-	float aspectRatio = viewportSize.x/viewportSize.y;
-	vec4 Ma = modelViewProjectionMatrix*vec4(b,1);
-	vec2 lPos = lensPosition;
-
-	Ma.x *= aspectRatio;
-	lPos.x *= aspectRatio;
-	
-	// Computes Distacne to vertex
-	float dl = distance(lPos, Ma.xy);
-
-	// vec2 ndCoordinates = (a.xy-viewportSizeSize/2)/(viewportSizeSize/2);
-	// float pxlDistance = length((lensPosition-ndCoordinates) * vec2(aspectRatio, 1.0));
-
-
-	if (dl <= lensRadius && dl > 0) {
-		
-		// Compute displacment direction
-
-		vec2 dir = normalize(vec2(Ma.x - lPos.x, Ma.y - lPos.y));
-
-		// Scaling is done with a cos function
-		float zoomIntensity = 1;
-		float x = dl/lensRadius;
-		float scaling = zoomIntensity*cos(3.1415 + x*2*3.1415)+zoomIntensity;
-
-		a += vec3(dir*scaling*testSlider,0);
-		b += vec3(dir*scaling*testSlider,0);
-		return lensRadius - dl;
-	}
-
-	return 0;
-
-
-}
 
 void spawnPoint(vec4 point, int index) {
 
@@ -150,16 +84,17 @@ void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
 	float aspectRatio = viewportSize.x/viewportSize.y;
 	gsFragmentLineWidth *= aspectRatio;	
 
-
-
     /* perform naive culling */
 	
+    /*
     vec2 area = viewportSize * 4;
     if( p1.x < -area.x || p1.x > area.x ) return;
     if( p1.y < -area.y || p1.y > area.y ) return;
     if( p2.x < -area.x || p2.x > area.x ) return;
     if( p2.y < -area.y || p2.y > area.y ) return;
-	
+	*/
+
+
     // determine the direction of each of the 3 segments (previous, current, next) 
     vec2 v0 = normalize( p1 - p0 );
     vec2 v1 = normalize( p2 - p1 );
@@ -172,30 +107,31 @@ void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
 
     // determine miter lines by averaging the normals of the 2 segments 
     vec2 miter_a = normalize( n0 + n1 );	// miter at start of current segment
-    vec2 miter_b = normalize( n1 + n2 ); // miter at end of current segment
+    vec2 miter_b = normalize( n1 + n2 );    // miter at end of current segment
 
     // determine the length of the miter by projecting it onto normal and then inverse it 
     float an1 = dot(miter_a, n1);
     float bn1 = dot(miter_b, n2);
     if (an1==0) an1 = 1;
     if (bn1==0) bn1 = 1;
-    float length_a = (lineWidth) / an1;
-    float length_b = (lineWidth) / bn1;
-	
+    float length_a = (gsFragmentLineWidth*0.25) / an1;
+    float length_b = (gsFragmentLineWidth*0.25) / bn1;
+    
+	/*
 	// prevent excessively long miters at sharp corners
 	float miterLimit = 0.75;
     if( dot( v0, v1 ) < -miterLimit ) {
         miter_a = n1;
-        length_a = lineWidth*0.5;
+        length_a = gsFragmentLineWidth*0.25;
 
 		vec4 c0, c1, c2;
         // close the gap 
         if( dot( v0, n1 ) > 0 ) {
 
-            c0 = vec4( ( p1 + lineWidth*0.5 * n0 ), 0, 1);
+            c0 = vec4( ( p1 + (gsFragmentLineWidth*0.25) * n0 ), 0, 1);
 			spawnPoint(c0, 0); 
 
-            c1 = vec4( ( p1 + lineWidth*0.5 * n1 ), 0, 1);
+            c1 = vec4( ( p1 + (gsFragmentLineWidth*0.25) * n1 ), 0, 1);
             spawnPoint(c1, 0);
 
             c2 = vec4( p1, 0.0, 1.0 );
@@ -204,10 +140,10 @@ void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
             EndPrimitive();
         }
         else {
-            c0 = vec4( ( p1 - lineWidth*0.5 * n1 ), 0, 1);
+            c0 = vec4( ( p1 - (gsFragmentLineWidth*0.25) * n1 ), 0, 1);
 			spawnPoint(c0, 0); 
 
-            c0 = vec4( ( p1 - lineWidth*0.5 * n0 ), 0, 1 );
+            c0 = vec4( ( p1 - (gsFragmentLineWidth*0.25) * n0 ), 0, 1 );
 			spawnPoint(c1, 0);
 
             c0 = vec4( p1, 0, 1);
@@ -216,11 +152,13 @@ void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
             EndPrimitive();
         }
     }
+    
     if( dot( v1, v2 ) < -miterLimit ) {
         miter_b = n1;
-        length_b = lineWidth*0.5;
+        length_b = (gsFragmentLineWidth*0.25);
     }
-	
+
+	*/
     // generate the triangle strip
 	vec4 topLeft = vec4( ( p1 + length_a * miter_a ), 0, 1);
 	vec4 bottomLeft = vec4( ( p1 - length_a * miter_a) , 0, 1);
@@ -244,4 +182,7 @@ void main() {
 
 
 	constructSegment(vsOut[0].prev, gl_in[0].gl_Position.xy, gl_in[1].gl_Position.xy, vsOut[1].next);
+
+
+
 }

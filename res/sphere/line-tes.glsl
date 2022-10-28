@@ -14,7 +14,7 @@ out vsData {
 	float pointImportance;
 	vec2 prev;
 	vec2 next;
-
+	bool firstVertex;
 } vsOut;
 
 patch in vec4 pp0;
@@ -85,11 +85,14 @@ vec3 distanceToLens(vec4 point){
 
 // Find the closest point and returns which side it is on===
 float leftOrRight(vec4 a, vec4 b){
+
+
 	float du = 1.0f/gl_PatchVerticesIn;
 	vec2 line = normalize(a.xy - b.xy);
 
 	float minDistance = 10000000.0f; 
 	float currentZ = 0.0f;
+	float totalZ = 0.0f;
 
 	for(float t = 0.0f; t < 1.0f; t+=du){
 		vec2 currentPoint = mix(a.xy, b.xy, t);
@@ -97,6 +100,7 @@ float leftOrRight(vec4 a, vec4 b){
 		if (dl.z < minDistance) {
 			currentZ = cross(vec3(dl.xy, 1), vec3(line, 1)).z;
 			minDistance = dl.z;
+			totalZ += currentZ;
 		}
 
 	}
@@ -105,40 +109,40 @@ float leftOrRight(vec4 a, vec4 b){
 
 
 // Displace a point by normal of the line it is from based on left or right of the line:
-void disp(inout vec4 pos, vec4 a, vec4 b) {
-	vec3 dl = distanceToLens(pos);
+vec4 disp(vec4 pos, vec4 a, vec4 b) {
 
+
+
+	vec3 dl = distanceToLens(pos);
+	vec2 dir = dl.xy;
+	float dist = dl.z;
 	float z = leftOrRight(a, b);
 
-	if (dl.z <= lensRadius){
-		float t = 1 - (dl.z/lensRadius);
-		vec2 dir = dl.xy;
-		vec2 line = normalize(a.xy - b.xy);
+	if (dist <= lensRadius){
+		float t = 1 - (dist/lensRadius);
 
+		vec2 line = normalize(a.xy - b.xy);
 		vec2 n = vec2(-line.y, line.x);
+
 		vec3 crossProduct = cross(vec3(dir, 1), vec3(line, 1));
 
 		vec2 dispDir;
-		if (z < 0){
+
+		if (z < 0 ){
 			dispDir = n;
-		} else if(z > 0)  {
-			dispDir = -n;
+ 		} else if ( z > 0 )  {
+			dispDir = - n;
 		} else {
-			dispDir = vec2(0,0);
+			dispDir = vec2(0, 0);
 		} 
 
-		//pos += vec4(testSlider*dispDir*(easingFunction(t)/10), 0, 0);
-		pos += vec4(testSlider*dispDir*(easeInOut(t)/10), 0, 0);
+		// return pos += vec4(testSlider*dispDir*(easingFunction(t)/10), 0, 0);
+		 return pos += vec4(testSlider*dispDir*(easeInOut(t)), 0, 0);
+		// return pos += vec4(testSlider*dir*(easeInOut(t)), 0, 0);
 	}
+	return pos;
 
 }
-
-/*
-Loop every point along the line ........
-Find the closest to the lens Position, and then use that as the left or right decider 
-it will always be within the radius
-
-*/
 
 
 void defaultMode(){
@@ -153,9 +157,13 @@ void defaultMode(){
 
 	// Importance is interpolated
 	vsOut.pointImportance = mix(tessOut[0].pointImportance, tessOut[0].pointImportance, u);
+	vsOut.firstVertex = false;
 
 	// du: delimiter, t0, t1, t2 (previous, current, next) t-values 
-	float du = 1.0f/(16.0f);
+
+	float vi = round(u * 16.0f); 
+
+	float du = 1.0f/16.0f;
 	float t0 = u-du;
 	float t1 = u;
 	float t2 = u+du;
@@ -163,28 +171,40 @@ void defaultMode(){
 	vec4 prev_pos, pos, next_pos;
 
 	// Current Position
-	pos = mix(p1, p2, t1);
 
-	// Used to detect end points for diffirent next, and prev (TODO not working)
-	if(u < 0){
-		prev_pos = p1;
-		disp(prev_pos, p0, p1);
+	if(vi <= 0.0f){
+		pos = p1;
+		
+		prev_pos = mix(p0, p1, t0);
+
+		next_pos = mix(p1, p2, t2);
+
+		pos = disp(pos, p0, p1);
+		next_pos = disp(next_pos, p1, p2);
+
+		vsOut.firstVertex = true;
+
+	} else if (vi >= 16.0f){
+		prev_pos = mix(p1, p2, t0);
+
+		pos = p2;
+
+		next_pos = mix(p2, p3, t1);
+
+		next_pos = disp(next_pos, p2, p3);
+		prev_pos = disp(prev_pos, p1, p2);
+		pos = disp(pos, p1, p2);
+
+
 	} else {
 		prev_pos = mix(p1, p2, t0);
-		disp(prev_pos, p1, p2);
-	}
-
-	if(u > 1){
-		next_pos = p3;
-		disp(next_pos, p2, p3);
-	} else {
+		pos = mix(p1, p2, t1);
 		next_pos = mix(p1, p2, t2);
-		disp(next_pos, p1, p2);
 
+		pos = disp(pos, p1, p2);
+		prev_pos = disp(prev_pos, p1, p2);
+		next_pos = disp(next_pos, p1, p2);
 	}
-
-
-	disp(pos, p1, p2);
 
 	vsOut.prev = prev_pos.xy;
 	vsOut.next = next_pos.xy;
