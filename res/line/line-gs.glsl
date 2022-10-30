@@ -24,8 +24,8 @@ in vsData {
     float pointImportance;
 	vec2 prev;
 	vec2 next;
-    bool firstVertex;
-
+	vec4 left;
+	vec4 right;
 } vsOut[];
 
 
@@ -77,102 +77,6 @@ void spawnPoint(vec4 point, int index) {
 
 }
 
-void constructSegment(vec2 p0, vec2 p1, vec2 p2, vec2 p3){
-	gsFragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
-		
-	// consider the current aspect ratio to make sure all shalos have equal width
-	float aspectRatio = viewportSize.x/viewportSize.y;
-	gsFragmentLineWidth *= aspectRatio;	
-
-    /* perform naive culling */
-	
-    /*
-    vec2 area = viewportSize * 4;
-    if( p1.x < -area.x || p1.x > area.x ) return;
-    if( p1.y < -area.y || p1.y > area.y ) return;
-    if( p2.x < -area.x || p2.x > area.x ) return;
-    if( p2.y < -area.y || p2.y > area.y ) return;
-	*/
-
-
-    // determine the direction of each of the 3 segments (previous, current, next) 
-    vec2 v0 = normalize( p1 - p0 );
-    vec2 v1 = normalize( p2 - p1 );
-    vec2 v2 = normalize( p3 - p2 );
-
-    // determine the normal of each of the 3 segments (previous, current, next) 
-    vec2 n0 = vec2( -v0.y, v0.x );
-    vec2 n1 = vec2( -v1.y, v1.x );
-    vec2 n2 = vec2( -v2.y, v2.x );
-
-    // determine miter lines by averaging the normals of the 2 segments 
-    vec2 miter_a = normalize( n0 + n1 );	// miter at start of current segment
-    vec2 miter_b = normalize( n1 + n2 );    // miter at end of current segment
-
-    // determine the length of the miter by projecting it onto normal and then inverse it 
-    float an1 = dot(miter_a, n1);
-    float bn1 = dot(miter_b, n2);
-    if (an1==0) an1 = 1;
-    if (bn1==0) bn1 = 1;
-    float length_a = (gsFragmentLineWidth*0.25) / an1;
-    float length_b = (gsFragmentLineWidth*0.25) / bn1;
-    
-	/*
-	// prevent excessively long miters at sharp corners
-	float miterLimit = 0.75;
-    if( dot( v0, v1 ) < -miterLimit ) {
-        miter_a = n1;
-        length_a = gsFragmentLineWidth*0.25;
-
-		vec4 c0, c1, c2;
-        // close the gap 
-        if( dot( v0, n1 ) > 0 ) {
-
-            c0 = vec4( ( p1 + (gsFragmentLineWidth*0.25) * n0 ), 0, 1);
-			spawnPoint(c0, 0); 
-
-            c1 = vec4( ( p1 + (gsFragmentLineWidth*0.25) * n1 ), 0, 1);
-            spawnPoint(c1, 0);
-
-            c2 = vec4( p1, 0.0, 1.0 );
-            spawnPoint(c2, 0);
-
-            EndPrimitive();
-        }
-        else {
-            c0 = vec4( ( p1 - (gsFragmentLineWidth*0.25) * n1 ), 0, 1);
-			spawnPoint(c0, 0); 
-
-            c0 = vec4( ( p1 - (gsFragmentLineWidth*0.25) * n0 ), 0, 1 );
-			spawnPoint(c1, 0);
-
-            c0 = vec4( p1, 0, 1);
-			spawnPoint(c2, 0);
-
-            EndPrimitive();
-        }
-    }
-    
-    if( dot( v1, v2 ) < -miterLimit ) {
-        miter_b = n1;
-        length_b = (gsFragmentLineWidth*0.25);
-    }
-
-	*/
-    // generate the triangle strip
-	vec4 topLeft = vec4( ( p1 + length_a * miter_a ), 0, 1);
-	vec4 bottomLeft = vec4( ( p1 - length_a * miter_a) , 0, 1);
-	vec4 topRight = vec4( ( p2 + length_b * miter_b ), 0, 1);
-	vec4 bottomRight = vec4( ( p2 - length_b * miter_b ) , 0, 1);
-
-	spawnPoint(topLeft, 0);
-	spawnPoint(bottomLeft, 0);
-	spawnPoint(topRight, 1);
-	spawnPoint(bottomRight, 1);
-	EndPrimitive(); 
-
-}
-
 void main() {
 
 	gsPrev = vec4(vsOut[0].prev, 0, 1);
@@ -180,9 +84,10 @@ void main() {
 	gsEnd =  gl_in[1].gl_Position;
 	gsNext = vec4(vsOut[1].next, 0, 1);
 
-
-	constructSegment(vsOut[0].prev, gl_in[0].gl_Position.xy, gl_in[1].gl_Position.xy, vsOut[1].next);
-
-
+	spawnPoint(vsOut[0].left, 0);
+	spawnPoint(vsOut[0].right, 0);
+	spawnPoint(vsOut[1].left, 1);
+	spawnPoint(vsOut[1].right, 1);
+	EndPrimitive();
 
 }

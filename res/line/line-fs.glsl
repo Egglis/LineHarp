@@ -74,7 +74,7 @@ float computeDistanceToLineSegment(vec2 v, vec2 w, vec2 p){
 
 void main()
 {	
-	
+
 	const float lineWidth = 0.25;//0.125;
 
 #ifdef RS_LINKEDLIST

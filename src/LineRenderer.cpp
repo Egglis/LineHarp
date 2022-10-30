@@ -45,24 +45,24 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 
 
 	createShaderProgram("line", {
-	{ GL_VERTEX_SHADER,"./res/sphere/line-vs.glsl" },
-	{ GL_TESS_CONTROL_SHADER, "./res/sphere/line-tcs.glsl"},
-	{ GL_TESS_EVALUATION_SHADER, "./res/sphere/line-tes.glsl"},
-	{ GL_GEOMETRY_SHADER,"./res/sphere/line-gs.glsl" },
-	{ GL_FRAGMENT_SHADER,"./res/sphere/line-fs.glsl" },
+	{ GL_VERTEX_SHADER,"./res/line/line-vs.glsl" },
+	{ GL_TESS_CONTROL_SHADER, "./res/line/line-tcs.glsl"},
+	{ GL_TESS_EVALUATION_SHADER, "./res/line/line-tes.glsl"},
+	{ GL_GEOMETRY_SHADER,"./res/line/line-gs.glsl" },
+	{ GL_FRAGMENT_SHADER,"./res/line/line-fs.glsl" },
 	},
-	{ "./res/sphere/globals.glsl" });
+	{ "./res/line/globals.glsl" });
 
 	createShaderProgram("blur", {
-		{ GL_VERTEX_SHADER,"./res/sphere/image-vs.glsl" },
-		{ GL_GEOMETRY_SHADER,"./res/sphere/image-gs.glsl" },
-		{ GL_FRAGMENT_SHADER,"./res/sphere/blur-fs.glsl" }
+		{ GL_VERTEX_SHADER,"./res/line/image-vs.glsl" },
+		{ GL_GEOMETRY_SHADER,"./res/line/image-gs.glsl" },
+		{ GL_FRAGMENT_SHADER,"./res/line/blur-fs.glsl" }
 		});
 
 	createShaderProgram("blend", {
-		{ GL_VERTEX_SHADER,"./res/sphere/image-vs.glsl" },
-		{ GL_GEOMETRY_SHADER,"./res/sphere/image-gs.glsl" },
-		{ GL_FRAGMENT_SHADER,"./res/sphere/blend-fs.glsl" }
+		{ GL_VERTEX_SHADER,"./res/line/image-vs.glsl" },
+		{ GL_GEOMETRY_SHADER,"./res/line/image-gs.glsl" },
+		{ GL_FRAGMENT_SHADER,"./res/line/blend-fs.glsl" }
 		});
 
 

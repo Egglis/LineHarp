@@ -1,6 +1,5 @@
 #version 450
 #include "/defines.glsl"
-#include "/globals.glsl"
 
 
 layout (isolines, equal_spacing) in;
@@ -14,11 +13,13 @@ out vsData {
 	float pointImportance;
 	vec2 prev;
 	vec2 next;
-	bool firstVertex;
+	vec4 left;
+	vec4 right;
 } vsOut;
 
 patch in vec4 pp0;
 patch in vec4 pp3;
+patch in int totalPoints;
 
 uniform float testSlider;
 uniform vec2 viewportSize;
@@ -83,33 +84,8 @@ vec3 distanceToLens(vec4 point){
 }
 
 
-// Find the closest point and returns which side it is on===
-float leftOrRight(vec4 a, vec4 b){
-
-
-	float du = 1.0f/gl_PatchVerticesIn;
-	vec2 line = normalize(a.xy - b.xy);
-
-	float minDistance = 10000000.0f; 
-	float currentZ = 0.0f;
-	float totalZ = 0.0f;
-
-	for(float t = 0.0f; t < 1.0f; t+=du){
-		vec2 currentPoint = mix(a.xy, b.xy, t);
-		vec3 dl = distanceToLens(vec4(currentPoint, 0, 1));
-		if (dl.z < minDistance) {
-			currentZ = cross(vec3(dl.xy, 1), vec3(line, 1)).z;
-			minDistance = dl.z;
-			totalZ += currentZ;
-		}
-
-	}
-	return currentZ;
-}
-
-
 // Displace a point by normal of the line it is from based on left or right of the line:
-vec4 disp(vec4 pos, vec4 a, vec4 b) {
+vec4 disp(vec4 pos) {
 
 	vec2 dir = pos.xy - lensPosition;
 	float dist = distanceToLens(pos).z;
@@ -118,39 +94,36 @@ vec4 disp(vec4 pos, vec4 a, vec4 b) {
 	float weight = 1.0-smoothstep(0.0, testSlider*lensRadius, dist);
 	
 	vec4 newPos = pos;
-	newPos.xy += weight * (normDir/viewportSize)*64.0;
+	newPos.xy += weight * normDir;
 	return newPos;
+}
 
-/*
-	vec3 dl = distanceToLens(pos);
-	vec2 dir = dl.xy;
-	float dist = dl.z;
-	float z = leftOrRight(a, b);
 
-	if (dist <= lensRadius){
-		float t = 1 - (dist/lensRadius);
+void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
+	float fragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
+		
+	// consider the current aspect ratio to make sure all shalos have equal width
+	float aspectRatio = viewportSize.x/viewportSize.y;
+	fragmentLineWidth *= aspectRatio;	
 
-		vec2 line = normalize(a.xy - b.xy);
-		vec2 n = vec2(-line.y, line.x);
+	vec2 v0 = normalize( pos.xy - prev_pos.xy);
+	vec2 v1 = normalize( next_pos.xy - pos.xy);
 
-		vec3 crossProduct = cross(vec3(dir, 1), vec3(line, 1));
+	vec2 n0 = vec2( -v0.y, v0.x);
+	vec2 n1 = vec2( -v1.y, v1.x);
 
-		vec2 dispDir;
+	vec2 miter_a = normalize(n0 + n1);
 
-		if (z < 0 ){
-			dispDir = n;
- 		} else if ( z > 0 )  {
-			dispDir = - n;
-		} else {
-			dispDir = vec2(0, 0);
-		} 
+	float an1 = dot(miter_a, n1);
+	if(an1==0) an1 = 1;
+	float length_a = (fragmentLineWidth*0.25) / an1;
 
-		// return pos += vec4(testSlider*dispDir*(easingFunction(t)/10), 0, 0);
-		 return pos += vec4(testSlider*dispDir*(easeInOut(t)), 0, 0);
-		// return pos += vec4(testSlider*dir*(easeInOut(t)), 0, 0);
-	}
-	return pos;
-	*/
+
+	vec4 left = vec4( (pos.xy + length_a * miter_a ), 0, 1);
+	vec4 right = vec4( (pos.xy - length_a * miter_a ), 0, 1);
+
+	vsOut.left = left;
+	vsOut.right = right;
 }
 
 
@@ -166,13 +139,12 @@ void defaultMode(){
 
 	// Importance is interpolated
 	vsOut.pointImportance = mix(tessOut[0].pointImportance, tessOut[0].pointImportance, u);
-	vsOut.firstVertex = false;
 
 	// du: delimiter, t0, t1, t2 (previous, current, next) t-values 
 
-	float vi = round(u * 16.0f); 
+	float vertexIndex = int(round(u * totalPoints)); 
 
-	float du = 1.0f/16.0f;
+	float du = 1.0f/totalPoints;
 	float t0 = u-du;
 	float t1 = u;
 	float t2 = u+du;
@@ -180,43 +152,30 @@ void defaultMode(){
 	vec4 prev_pos, pos, next_pos;
 
 	// Current Position
+	pos = mix(p1, p2, t1);
 
-	if(vi <= 0.0f){
-		pos = p1;
-		
-		prev_pos = mix(p0, p1, t0);
-
+	// Edge cases when a patch ends and starts 
+	if(vertexIndex == 0){
+		prev_pos = mix(p0, p1, 1.0f-du);
 		next_pos = mix(p1, p2, t2);
-
-		pos = disp(pos, p0, p1);
-		next_pos = disp(next_pos, p1, p2);
-
-		vsOut.firstVertex = true;
-
-	} else if (vi >= 16.0f){
+	} else if (vertexIndex == int(totalPoints)){
 		prev_pos = mix(p1, p2, t0);
-
-		pos = p2;
-
-		next_pos = mix(p2, p3, t1);
-
-		next_pos = disp(next_pos, p2, p3);
-		prev_pos = disp(prev_pos, p1, p2);
-		pos = disp(pos, p1, p2);
-
-
+		next_pos = mix(p2, p3, 0.0f+du);
 	} else {
-		prev_pos = mix(p1, p2, t0);
-		pos = mix(p1, p2, t1);
+		prev_pos = mix(p1, p2, t0); 
 		next_pos = mix(p1, p2, t2);
-
-		pos = disp(pos, p1, p2);
-		prev_pos = disp(prev_pos, p1, p2);
-		next_pos = disp(next_pos, p1, p2);
 	}
+
+
+	// Displacments 
+	pos = disp(pos);
+	prev_pos = disp(prev_pos);
+	next_pos = disp(next_pos);
 
 	vsOut.prev = prev_pos.xy;
 	vsOut.next = next_pos.xy;
+
+	constructLeftRightVertex(prev_pos, pos, next_pos);
 
 	gl_Position = pos;
 

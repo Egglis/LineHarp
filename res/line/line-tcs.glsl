@@ -17,6 +17,8 @@ uniform mat4 modelViewProjectionMatrix;
 
 patch out vec4 pp0;
 patch out vec4 pp3;
+patch out int totalPoints;
+
 
 void main(){
 
@@ -24,7 +26,7 @@ void main(){
 	gl_TessLevelOuter[1] = NR_POINTS;
 
 	tessOut[gl_InvocationID].pointImportance = vsOut[gl_InvocationID].pointImportance;
-
+    totalPoints = NR_POINTS;
 
 	if(gl_InvocationID == 0) {
                 gl_TessLevelOuter[0] = float(1);
