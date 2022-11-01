@@ -51,7 +51,10 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 	{ GL_GEOMETRY_SHADER,"./res/line/line-gs.glsl" },
 	{ GL_FRAGMENT_SHADER,"./res/line/line-fs.glsl" },
 	},
-	{ "./res/line/globals.glsl" });
+	{
+		"./res/line/globals.glsl",
+		"./res/line/lens.glsl" 
+	});
 
 	createShaderProgram("blur", {
 		{ GL_VERTEX_SHADER,"./res/line/image-vs.glsl" },
@@ -156,13 +159,6 @@ void LineRenderer::display()
 	auto programBlend = shaderProgram("blend");
 
 	vec4 worldLightPosition = inverseModelLightMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
-	double mouseX, mouseY;
-	glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
-	m_lensPosition = vec2(2.0f*float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f*float(mouseY) / float(viewportSize.y) + 1.0f);
-	//globjects::debug() << m_lensPosition.x << "," << m_lensPosition.y << std::endl;
-	float fT = 0.5f;
-	m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
 
 	vec4 projectionInfo(float(-2.0 / (viewportSize.x * projectionMatrix[0][0])),
 		float(-2.0 / (viewportSize.y * projectionMatrix[1][1])),
@@ -366,9 +362,27 @@ void LineRenderer::display()
 
 		ImGui::Checkbox("Enable Focus-Lens", &m_enableLens);
 		ImGui::Checkbox("Enable Angular-Brushing", &m_enableAngularBrush);
-		ImGui::SliderFloat("Testing Slider", &m_testSlider, 0.0f, 1.0f);
-		ImGui::SliderFloat("Brushing Angle", &viewer()->m_scrollWheelAngle, -90.0f, 90.0f);
-		m_brushingAngle = viewer()->m_scrollWheelAngle;
+		ImGui::Checkbox("Enable Lens Depth", &m_enableLensDepth);
+
+		ImGui::SliderFloat("Lens Depth", &viewer()->m_lensDepthValue, 0.0f, 1.0f);
+		m_lensDepthValue = viewer()->getLensDepthValue();
+
+
+		float const tmplensDisp = m_lensDisp;
+
+		ImGui::SliderFloat("Lens Displacment ", &m_lensDisp, 0.0f, 1.0f);
+
+		if (!m_enableAngularBrush) {
+			m_lensDisp = max(0.0f, viewer()->m_scrollWheelAngle / 90);
+			m_action = m_lensDisp != tmplensDisp;
+		}
+
+		ImGui::SliderFloat("Brushing Angle", &m_brushingAngle, -90.0f, 90.0f);
+
+		if (m_enableAngularBrush) {
+			m_brushingAngle = viewer()->m_scrollWheelAngle;
+		}
+		
 	}
 
 	if (ImGui::CollapsingHeader("Overplotting Measurement", ImGuiTreeNodeFlags_DefaultOpen))
@@ -394,6 +408,16 @@ void LineRenderer::display()
 	ImGui::End();
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	if (!viewer()->m_lensDepthChanging) {
+		double mouseX, mouseY;
+		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+		m_lensPosition = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
+		//globjects::debug() << m_lensPosition.x << "," << m_lensPosition.y << std::endl;
+		float fT = 0.5f;
+		m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
+	}
+
 
 	int numberOfTrajectories = viewer()->scene()->tableData()->m_numberOfTrajectories;
 	std::vector<int> numberOfTimesteps = viewer()->scene()->tableData()->m_numberOfTimesteps;
@@ -429,6 +453,9 @@ void LineRenderer::display()
 
 	if (m_enableAngularBrush)
 		defines += "#define ANGULAR_BRUSHING\n";
+
+	if (m_enableLensDepth)
+		defines += "#define LENS_DEPTH\n";
 
 
 
@@ -484,6 +511,27 @@ void LineRenderer::display()
 	
 	// On Mouse Move, Event Start -> 0 - 1, in 1 second with ease in and out
 	// On Mouse move again, Event End -> 0 - 1, with ease in and out, and start new Event Start
+
+
+	// FPS independant animation setup
+	if (m_prevTime == NULL) m_prevTime = glfwGetTime();
+	float currTime = glfwGetTime();
+	float deltaTime = currTime - m_prevTime;
+	m_prevTime = currTime;
+
+
+	m_actionEnd = m_lensDisp;
+
+	if (m_action) {
+		m_time += deltaTime;
+
+		if (m_time > 1.0f) {
+			m_actionStart = m_actionEnd;
+			m_time = 0.0f;
+			m_action = false;
+		}
+	}
+
 
 
 
@@ -552,8 +600,15 @@ void LineRenderer::display()
 	programLine->setUniform("viewMatrix", viewMatrix);
 	programLine->setUniform("inverseViewMatrix", inverseViewMatrix);
 
+
 	programLine->setUniform("brushingAngle", m_brushingAngle);
-	programLine->setUniform("testSlider", m_testSlider);
+	programLine->setUniform("lensDepthValue", m_lensDepthValue);
+	programLine->setUniform("lensDisp", m_lensDisp);
+	programLine->setUniform("actionStart", m_actionStart);
+	programLine->setUniform("actionEnd", m_actionEnd);
+	programLine->setUniform("time", m_time);
+
+
 	m_vao->bind();
 	glPatchParameteri(GL_PATCH_VERTICES, 4);
 
@@ -581,7 +636,7 @@ void LineRenderer::display()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	// make sure lines are drawn on top of each other
-	//glDisable(GL_DEPTH_TEST);
+	// glDisable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -657,6 +712,7 @@ void LineRenderer::display()
 	programBlend->setUniform("lensPosition", m_lensPosition);
 	programBlend->setUniform("lensRadius", m_lensRadius);
 	programBlend->setUniform("lensBorderColor", viewer()->lensColor());
+	programBlend->setUniform("lensDepthValue", m_lensDepthValue);
 
 	m_vaoQuad->bind();
 	
@@ -722,5 +778,15 @@ void LineRenderer::display()
 
 	// Restore OpenGL state
 	currentState->apply();
+}
+
+void lineweaver::LineRenderer::handleAction()
+{
+	if (!m_action) m_action = true;
+	else {
+		m_actionStart = m_actionEnd;
+		m_actionEnd = m_lensDisp;
+	}
+
 }
 

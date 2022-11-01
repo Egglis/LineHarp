@@ -50,6 +50,8 @@ namespace lineweaver
 
 		float m_scrollWheelAngle = 0.0f;
 		float m_lineChartDiameter = 2.0f*sqrt(3.0f);
+		float m_lensDepthValue = 1.0f;
+		bool m_lensDepthChanging = false;
 
 		void setBackgroundColor(const glm::vec3& c);
 		void setSamplePointColor(const glm::vec3& c);
@@ -68,6 +70,9 @@ namespace lineweaver
 		bool enforcedDataRefresh();
 		bool enforcedImportanceRefresh();
 		bool enforcedOverplottingComp();
+
+		void setLensDepthValue(float z) { m_lensDepthValue = std::clamp(m_lensDepthValue+z, 0.0f, 1.0f); };
+		float getLensDepthValue() { return m_lensDepthValue; };
 
 	private:
 
@@ -132,6 +137,8 @@ namespace lineweaver
 
 		// check key to enforce overplotting computation
 		bool m_enforceOverplottingComp = false;		// F8
+
+
 	};
 
 

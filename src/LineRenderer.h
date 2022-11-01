@@ -35,6 +35,7 @@ namespace lineweaver
 	public:
 		LineRenderer(Viewer *viewer);
 		virtual void display();
+		void handleAction();
 	private:
 		
 		LinkedListRendering* renderingStrategy = NULL;
@@ -109,7 +110,7 @@ namespace lineweaver
 
 		// support for angular brush
 		bool m_enableAngularBrush = false;
-		float m_testSlider = 0.0f;
+		float m_lensDisp= 0.0f;
 		float m_brushingAngle = 0.0f;
 
 		std::vector<unsigned int> m_totalPixelsPerTrajectory;
@@ -117,8 +118,12 @@ namespace lineweaver
 		double m_overplottingRatio = 0.0;
 
 		float m_actionStart = 0.0f;
-		float m_actionEnd = 0.0f;
-
+		float m_actionEnd = 1.0f;
+		double m_prevTime = NULL;
+		bool m_action = false;
+		float m_time = 0.0;
+		float m_lensDepthValue = 1.0f;
+		bool m_enableLensDepth = false;
 		// ------------------------------------------------------------------------------------------
 	};
 

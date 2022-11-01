@@ -116,7 +116,7 @@ void CameraInteractor::mouseButtonEvent(int button, int action, int mods)
 {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
 	{
-		m_rotating = true;
+		m_lensDepth = true;
 		m_xPrevious = m_xCurrent;
 		m_yPrevious = m_yCurrent;
 	}
@@ -137,6 +137,9 @@ void CameraInteractor::mouseButtonEvent(int button, int action, int mods)
 		m_rotating = false;
 		m_scaling = false;
 		m_panning = false;
+		m_lensDepth = false;
+		viewer()->m_lensDepthChanging = false;
+
 	}
 }
 
@@ -156,28 +159,33 @@ void CameraInteractor::cursorPosEvent(double xpos, double ypos)
 		//----------------------------------------------------------------------------------------------------------------------	
 	}
 
-	//if (m_rotating)
-	//{
-	//	if (m_xCurrent != m_xPrevious || m_yCurrent != m_yPrevious)
-	//	{
-	//		vec3 va = arcballVector(m_xPrevious, m_yPrevious);
-	//		vec3 vb = arcballVector(m_xCurrent, m_yCurrent);
-	//
-	//		if (va != vb)
-	//		{
-	//			float angle = acos(max(-1.0f, min(1.0f, dot(va, vb))));
-	//			vec3 axis = cross(va, vb);
-	//
-	//			mat4 viewTransform = viewer()->viewTransform();
-	//			mat4 inverseViewTransform = inverse(viewTransform);
-	//			vec4 transformedAxis = inverseViewTransform * vec4(axis, 0.0);
-	//
-	//			mat4 newViewTransform = rotate(viewTransform, angle, vec3(transformedAxis));
-	//			viewer()->setViewTransform(newViewTransform);
-	//		}
-	//	}
-	//
-	//}
+	if (m_lensDepth)
+	{
+		if (m_xCurrent != m_xPrevious || m_yCurrent != m_yPrevious)
+		{
+			viewer()->m_lensDepthChanging = true;
+			ivec2 viewportSize = viewer()->viewportSize();
+			vec2 va = vec2(2.0f * float(m_xPrevious) / float(viewportSize.x) - 1.0f, -2.0f * float(m_yPrevious) / float(viewportSize.y) + 1.0f);
+			vec2 vb = vec2(2.0f * float(m_xCurrent) / float(viewportSize.x) - 1.0f, -2.0f * float(m_yCurrent) / float(viewportSize.y) + 1.0f);
+			vec2 d = vb - va;
+
+			float l = std::abs(d.x) > std::abs(d.y) ? d.x : d.y;
+			float s = 0.0f;
+
+			if (l > 0.0f)
+			{
+				s += std::min(0.5f, length(d));
+				viewer()->setLensDepthValue(s);
+			}
+			else
+			{
+				s -= std::min(0.5f, length(d));
+				viewer()->setLensDepthValue(s);
+			}
+
+		}
+	}
+
 
 	if (m_scaling)
 	{

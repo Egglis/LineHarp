@@ -1,7 +1,6 @@
 #version 450
 #include "/defines.glsl"
 
-
 layout (isolines, equal_spacing) in;
 
 in tessVsData {
@@ -20,16 +19,21 @@ out vsData {
 patch in vec4 pp0;
 patch in vec4 pp3;
 patch in int totalPoints;
+patch in float imp_p0;
+patch in float imp_p3;
 
-uniform float testSlider;
-uniform vec2 viewportSize;
 
 // Magic lens
 uniform float lineWidth;
-uniform vec2 lensPosition;
-uniform float lensRadius;
+
 uniform mat4 modelViewProjectionMatrix;
 uniform mat4 inverseModelViewProjectionMatrix;
+
+uniform vec2 delayedLensPosition;
+uniform float actionStart;
+uniform float actionEnd;
+uniform float time;
+uniform vec2 viewportSize;
 
 
 // Ease in quad from defines.glsl, used in disp()
@@ -40,6 +44,9 @@ float easeInOut(float t) {
 		return -1+(4-2*t)*t;
 	}
 };
+
+
+#include "/lens.glsl"
 
 
 // Catmull rom, (TODO currently not used)
@@ -68,35 +75,7 @@ vec4 catmull(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float u ){
 
 }
 
-// Returns distance to lens
-float distanceToLens(vec4 point){
-	float aspectRatio = viewportSize.x/viewportSize.y;
-
-	vec2 lPos = lensPosition;
-	point.x *= aspectRatio;
-	lPos.x *= aspectRatio;
-
-	float dist = distance(lPos, point.xy);
-
-	return dist;
-}
-
-
-
-
-// Displace a point
-void disp(inout vec4 pos) {
-
-	float dist = distanceToLens(pos);
-	vec2 normDir = normalize(pos.xy - lensPosition);
-
-	float weight = 1.0f - smoothstep(0.0, lensRadius, dist);
-
-	pos.xy += weight*(lensRadius*viewportSize.y)*testSlider * (normDir/viewportSize);
-
-}
-
-
+// Constructs the left and right vertex of current position based on prev and next
 void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 	float fragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
 		
@@ -123,7 +102,7 @@ void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 }
 
 
-void defaultMode(){
+void main(){
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
 
@@ -133,8 +112,6 @@ void defaultMode(){
 	vec4 p3 = pp3;
 
 
-	// Importance is interpolated
-	vsOut.pointImportance = mix(tessOut[0].pointImportance, tessOut[0].pointImportance, u);
 
 	// du: delimiter, t0, t1, t2 (previous, current, next) t-values 
 
@@ -145,7 +122,17 @@ void defaultMode(){
 	float t1 = u;
 	float t2 = u+du;
 
+	// Importance is interpolated
+
+	float imp_p1 = tessOut[0].pointImportance;
+	float imp_p2 = tessOut[1].pointImportance;
+
+	float vertexImportance = mix(imp_p1, imp_p2, t1);
+	vsOut.pointImportance = vertexImportance;
+
+
 	vec4 prev_pos, pos, next_pos;
+	float prev_imp, next_imp;
 
 	// Current Position
 	pos = mix(p1, p2, t1);
@@ -153,20 +140,30 @@ void defaultMode(){
 	// Edge cases when a patch ends and starts 
 	if(vertexIndex == 0){
 		prev_pos = mix(p0, p1, 1.0f - du);
+		prev_imp = mix(imp_p0, imp_p1, 1.0f - du);  
+
 		next_pos = mix(p1, p2, t2);
+		next_imp = mix(imp_p1, imp_p2, t2);
+
 	} else if (vertexIndex == totalPoints){
 		prev_pos = mix(p1, p2, t0);
+		prev_imp = mix(imp_p1, imp_p2, t0);
+
 		next_pos = mix(p2, p3, 0.0f + du);
+		next_imp = mix(imp_p2, imp_p3, 0.0f + du);
+
 	} else {
-		prev_pos = mix(p1, p2, t0); 
+		prev_pos = mix(p1, p2, t0);
+		prev_imp = mix(imp_p1, imp_p2, t0);
+
 		next_pos = mix(p1, p2, t2);
+		next_imp = mix(imp_p1, imp_p2, t2);
 	}
 
-
 	// Displacments 
-	disp(pos);
-	disp(prev_pos);
-	disp(next_pos);
+	pos = displace(pos, vertexImportance);
+	prev_pos = displace(prev_pos, prev_imp);
+	next_pos = displace(next_pos, next_imp);
 
 	vsOut.prev = prev_pos.xy;
 	vsOut.next = next_pos.xy;
@@ -174,10 +171,4 @@ void defaultMode(){
 	constructLeftRightVertex(prev_pos, pos, next_pos);
 
 	gl_Position = pos;
-
-}
-
-void main(){
-
-	defaultMode();
 }
