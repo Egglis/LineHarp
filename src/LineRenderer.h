@@ -35,7 +35,6 @@ namespace lineweaver
 	public:
 		LineRenderer(Viewer *viewer);
 		virtual void display();
-
 	private:
 		
 		LinkedListRendering* renderingStrategy = NULL;
@@ -116,6 +115,10 @@ namespace lineweaver
 		std::vector<unsigned int> m_totalPixelsPerTrajectory;
 		std::vector<unsigned int> m_visiblePixelsPerTrajectory;
 		double m_overplottingRatio = 0.0;
+
+		float m_actionStart = 0.0f;
+		float m_actionEnd = 0.0f;
+
 		// ------------------------------------------------------------------------------------------
 	};
 

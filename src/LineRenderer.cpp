@@ -251,7 +251,7 @@ void LineRenderer::display()
 		}
 
 		std::string oldImportanceFilename = m_importanceFilename;
-
+		
 		if (ImGui::Button("Browse##2"))
 		{
 			const char* filterExtensions[] = { "*.csv" };
@@ -482,6 +482,8 @@ void LineRenderer::display()
 	// Line rendering pass and linked list generation
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	// On Mouse Move, Event Start -> 0 - 1, in 1 second with ease in and out
+	// On Mouse move again, Event End -> 0 - 1, with ease in and out, and start new Event Start
 
 
 
@@ -721,3 +723,4 @@ void LineRenderer::display()
 	// Restore OpenGL state
 	currentState->apply();
 }
+

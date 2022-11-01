@@ -68,41 +68,38 @@ vec4 catmull(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float u ){
 
 }
 
-// Computes distance to lens and direction to lens (x, y, distance);
-vec3 distanceToLens(vec4 point){
+// Returns distance to lens
+float distanceToLens(vec4 point){
 	float aspectRatio = viewportSize.x/viewportSize.y;
 
 	vec2 lPos = lensPosition;
-
 	point.x *= aspectRatio;
 	lPos.x *= aspectRatio;
 
-	float dl = distance(lPos, point.xy);
-	vec2 dir = normalize(point.xy - lPos);
+	float dist = distance(lPos, point.xy);
 
-	return vec3(dir, dl);
+	return dist;
 }
 
 
-// Displace a point by normal of the line it is from based on left or right of the line:
-vec4 disp(vec4 pos) {
 
-	vec2 dir = pos.xy - lensPosition;
-	float dist = distanceToLens(pos).z;
-	vec2 normDir = normalize(dir);
 
-	float weight = 1.0-smoothstep(0.0, testSlider*lensRadius, dist);
-	
-	vec4 newPos = pos;
-	newPos.xy += weight * normDir;
-	return newPos;
+// Displace a point
+void disp(inout vec4 pos) {
+
+	float dist = distanceToLens(pos);
+	vec2 normDir = normalize(pos.xy - lensPosition);
+
+	float weight = 1.0f - smoothstep(0.0, lensRadius, dist);
+
+	pos.xy += weight*(lensRadius*viewportSize.y)*testSlider * (normDir/viewportSize);
+
 }
 
 
 void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 	float fragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
 		
-	// consider the current aspect ratio to make sure all shalos have equal width
 	float aspectRatio = viewportSize.x/viewportSize.y;
 	fragmentLineWidth *= aspectRatio;	
 
@@ -117,7 +114,6 @@ void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 	float an1 = dot(miter_a, n1);
 	if(an1==0) an1 = 1;
 	float length_a = (fragmentLineWidth*0.25) / an1;
-
 
 	vec4 left = vec4( (pos.xy + length_a * miter_a ), 0, 1);
 	vec4 right = vec4( (pos.xy - length_a * miter_a ), 0, 1);
@@ -156,11 +152,11 @@ void defaultMode(){
 
 	// Edge cases when a patch ends and starts 
 	if(vertexIndex == 0){
-		prev_pos = mix(p0, p1, 1.0f-du);
+		prev_pos = mix(p0, p1, 1.0f - du);
 		next_pos = mix(p1, p2, t2);
-	} else if (vertexIndex == int(totalPoints)){
+	} else if (vertexIndex == totalPoints){
 		prev_pos = mix(p1, p2, t0);
-		next_pos = mix(p2, p3, 0.0f+du);
+		next_pos = mix(p2, p3, 0.0f + du);
 	} else {
 		prev_pos = mix(p1, p2, t0); 
 		next_pos = mix(p1, p2, t2);
@@ -168,9 +164,9 @@ void defaultMode(){
 
 
 	// Displacments 
-	pos = disp(pos);
-	prev_pos = disp(prev_pos);
-	next_pos = disp(next_pos);
+	disp(pos);
+	disp(prev_pos);
+	disp(next_pos);
 
 	vsOut.prev = prev_pos.xy;
 	vsOut.next = next_pos.xy;

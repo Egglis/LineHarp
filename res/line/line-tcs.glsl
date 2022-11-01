@@ -21,6 +21,8 @@ patch out int totalPoints;
 
 
 void main(){
+    
+    // TODO Tesselated based on magic lens 
 
 	gl_TessLevelOuter[0] = 1;
 	gl_TessLevelOuter[1] = NR_POINTS;
