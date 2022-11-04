@@ -1,4 +1,5 @@
 #include "LinkedListRendering.h"
+#include <glm/gtc/integer.hpp>
 
 using namespace lineweaver;
 using namespace gl;
@@ -31,30 +32,26 @@ void LinkedListRendering::prepareDataBuffers() {
 void lineweaver::LinkedListRendering::prepareIndicesBuffer()
 {
 
+
 	int index = 0;
 	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
 
-
+		// New Empty array
 		std::vector<GLuint> temp;
 		m_indices.push_back(temp);
 
-
-		for (int j = 0; j < m_dataTable->m_numberOfTimesteps.at(i) - 3; j++) {
-
-			const int max = (i + 1) * m_dataTable->m_numberOfTimesteps.at(i) - 1;
-			for (int x = index; x <= index + 3; x++) {
-				if (x >= max) {
-					m_indices.at(i).push_back(max-1);
-				}
-				else {
-					m_indices.at(i).push_back(x);
-				}
-			}
-			index += 1;
-
+		int timeSteps = m_dataTable->m_numberOfTimesteps.at(i);
+		for (int j = 0; j < timeSteps - 3; j++) {
+			m_indices.at(i).push_back(index);
+			m_indices.at(i).push_back(index + 1);
+			m_indices.at(i).push_back(index + 2);
+			m_indices.at(i).push_back(index + 3);
+			
+			index++;
 		}
 		index += 3;
 	}
+
 }
 
 

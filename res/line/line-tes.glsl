@@ -5,7 +5,6 @@ layout (isolines, equal_spacing) in;
 
 in tessVsData {
 	float pointImportance;
-	float tDiff;
 } tessOut[];
 
 out vsData {
@@ -21,6 +20,7 @@ patch in vec4 pp3;
 patch in int totalPoints;
 patch in float imp_p0;
 patch in float imp_p3;
+patch in float t_value;
 
 
 // Magic lens
@@ -102,6 +102,8 @@ void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 }
 
 
+
+
 void main(){
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
@@ -114,9 +116,7 @@ void main(){
 
 
 	// du: delimiter, t0, t1, t2 (previous, current, next) t-values 
-
-	float vertexIndex = int(round(u * totalPoints)); 
-
+	int vertexIndex = int(round(u * totalPoints)); 
 	float du = 1.0f/totalPoints;
 	float t0 = u-du;
 	float t1 = u;
@@ -133,6 +133,10 @@ void main(){
 
 	vec4 prev_pos, pos, next_pos;
 	float prev_imp, next_imp;
+
+	// Handle edge cases where points are the same
+	if(p0 == p1) p0 += vec4(0.000001f, 0, 0 ,0);
+	if(p2 == p3) p3 += vec4(0.000001f, 0, 0 ,0);
 
 	// Current Position
 	pos = mix(p1, p2, t1);

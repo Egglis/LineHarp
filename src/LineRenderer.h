@@ -124,6 +124,7 @@ namespace lineweaver
 		float m_time = 0.0;
 		float m_lensDepthValue = 1.0f;
 		bool m_enableLensDepth = false;
+
 		// ------------------------------------------------------------------------------------------
 	};
 

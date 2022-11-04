@@ -1,8 +1,10 @@
 
+
 uniform vec2 lensPosition;
 uniform float lensRadius;
 uniform float lensDisp;
 uniform float lensDepthValue;
+
 
 // Returns distance to given lens position
 float distanceToLens(vec4 point, vec2 lensPos) {
@@ -29,7 +31,7 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 
 
 // Displace a point
-vec4 disp(vec4 pos, vec2 lensPos) {
+bool disp(inout vec4 pos, vec2 lensPos) {
 
 	float dist = distanceToLens(pos, lensPosition);
 	vec2 normDir = normalize(pos.xy - lensPosition);
@@ -38,11 +40,34 @@ vec4 disp(vec4 pos, vec2 lensPos) {
 	weight *= (lensRadius*viewportSize.y)*lensDisp;
 
 	pos.xy +=  weight * (normDir/viewportSize);	
-	return pos;
+	return weight > 0.0f;
 }
 
 
 vec4 displace(vec4 pos, float vertexImportance){
-	pos.z = vertexImportance;
-	return disp(pos, lensPosition); 
-};
+	
+	vec4 position = pos;
+	position.z = vertexImportance;
+
+	disp(position, lensPosition); 
+
+	position.z = 0;
+
+	return position;
+}
+
+
+#define MAX_POINTS 64
+
+// Lazy tesselation that returns how many points that are displaced < 64
+int lazyTesselation(vec4 p1, vec4 p2) {
+	int totalDisplacedPoints = 0;
+	for(float t = 0.0f; t <= 1.0f; t += (1.0f/float(MAX_POINTS) )) {
+		vec4 currPoint = mix(p1, p2, t);
+		bool isDisplaced = disp(currPoint, lensPosition);
+		if(isDisplaced) totalDisplacedPoints++;
+	}
+
+	// GPU already limits the amount of tesselated control points to 64 (Nividia 1070)
+	return max(2, min(totalDisplacedPoints, MAX_POINTS));
+}
