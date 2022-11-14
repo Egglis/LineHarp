@@ -1,9 +1,16 @@
 
+#include "/globals.glsl"
 
 uniform vec2 lensPosition;
 uniform float lensRadius;
 uniform float lensDisp;
 uniform float lensDepthValue;
+uniform vec2 delayedLensPosition;
+uniform float time;
+uniform float actionStart;
+uniform float actionEnd;
+uniform vec2[10] dlp; 
+
 
 
 // Returns distance to given lens position
@@ -33,12 +40,13 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 // Displace a point
 bool disp(inout vec4 pos, vec2 lensPos) {
 
-	float dist = distanceToLens(pos, lensPosition);
-	vec2 normDir = normalize(pos.xy - lensPosition);
+	float dist = distanceToLens(pos, lensPos);
+	vec2 normDir = normalize(pos.xy - lensPos);
 
 	float weight = 1.0f - smoothstep(0.0, lensRadius, dist);
-	weight *= (lensRadius*viewportSize.y)*lensDisp;
+	//weight *= easeOutElastic(time);
 
+	weight *= (lensRadius*viewportSize.y)*lensDisp;
 	pos.xy +=  weight * (normDir/viewportSize);	
 	return weight > 0.0f;
 }
@@ -46,10 +54,21 @@ bool disp(inout vec4 pos, vec2 lensPos) {
 
 vec4 displace(vec4 pos, float vertexImportance){
 	
-	vec4 position = pos;
-	position.z = vertexImportance;
+	// Interpolate between delayedLensPosition and lensPosition
 
-	disp(position, lensPosition); 
+	vec4 position = pos;
+	vec4 delayedPosition = pos;
+
+	//vec2 dlLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
+
+	position.z = vertexImportance;
+	delayedPosition.z = vertexImportance;
+
+	disp(position, lensPosition);
+	disp(delayedPosition, delayedLensPosition);
+
+	position = mix(position, delayedPosition, (1.0f-easeOutElastic(time)));
+
 
 	position.z = 0;
 
@@ -69,5 +88,6 @@ int lazyTesselation(vec4 p1, vec4 p2) {
 	}
 
 	// GPU already limits the amount of tesselated control points to 64 (Nividia 1070)
-	return max(2, min(totalDisplacedPoints, MAX_POINTS));
+	//return max(2, min(totalDisplacedPoints, MAX_POINTS));
+	return MAX_POINTS;
 }

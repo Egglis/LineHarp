@@ -372,9 +372,10 @@ void LineRenderer::display()
 
 		ImGui::SliderFloat("Lens Displacment ", &m_lensDisp, 0.0f, 1.0f);
 
+		// If action is not running 
 		if (!m_enableAngularBrush) {
 			m_lensDisp = max(0.0f, viewer()->m_scrollWheelAngle / 90);
-			m_action = m_lensDisp != tmplensDisp;
+			//m_action = m_lensDisp != tmplensDisp;
 		}
 
 		ImGui::SliderFloat("Brushing Angle", &m_brushingAngle, -90.0f, 90.0f);
@@ -412,10 +413,9 @@ void LineRenderer::display()
 	if (!viewer()->m_lensDepthChanging) {
 		double mouseX, mouseY;
 		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+
 		m_lensPosition = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
-		//globjects::debug() << m_lensPosition.x << "," << m_lensPosition.y << std::endl;
-		float fT = 0.5f;
-		m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
+
 	}
 
 
@@ -505,34 +505,27 @@ void LineRenderer::display()
 		reloadShaders();
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Line rendering pass and linked list generation
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	// On Mouse Move, Event Start -> 0 - 1, in 1 second with ease in and out
-	// On Mouse move again, Event End -> 0 - 1, with ease in and out, and start new Event Start
-
 
 	// FPS independant animation setup
 	if (m_prevTime == NULL) m_prevTime = glfwGetTime();
 	float currTime = glfwGetTime();
 	float deltaTime = currTime - m_prevTime;
-	m_prevTime = currTime;
 
+	m_time += deltaTime;
+	globjects::debug() << m_time << std::endl;
+	if(m_time >= 0.5f){ // 0.25 sec passed
+		globjects::debug() << "Update DL" << std::endl;
+		m_time = 0.0f;
+		globjects::debug() << m_time << std::endl;
 
-	m_actionEnd = m_lensDisp;
-
-	if (m_action) {
-		m_time += deltaTime;
-
-		if (m_time > 1.0f) {
-			m_actionStart = m_actionEnd;
-			m_time = 0.0f;
-			m_action = false;
-		}
+		m_delayedLensPosition = m_lensPosition;
 	}
 
-
+	m_prevTime = currTime;
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Line rendering pass and linked list generation
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 
 
 	m_lineFramebuffer->bind();
@@ -710,6 +703,7 @@ void LineRenderer::display()
 
 	programBlend->setUniform("viewportSize", vec2(viewportSize));
 	programBlend->setUniform("lensPosition", m_lensPosition);
+	programBlend->setUniform("delayedLensPosition", m_delayedLensPosition);
 	programBlend->setUniform("lensRadius", m_lensRadius);
 	programBlend->setUniform("lensBorderColor", viewer()->lensColor());
 	programBlend->setUniform("lensDepthValue", m_lensDepthValue);
@@ -780,13 +774,18 @@ void LineRenderer::display()
 	currentState->apply();
 }
 
-void lineweaver::LineRenderer::handleAction()
+void lineweaver::LineRenderer::handleAction(bool start)
 {
-	if (!m_action) m_action = true;
-	else {
-		m_actionStart = m_actionEnd;
-		m_actionEnd = m_lensDisp;
-	}
+
+	// On Mouse Move, Event Start -> 0 - 1, in 1 second with ease in and out
+	// On Mouse move again, Event End -> 0 - 1, with ease in and out, and start new Event Start
+	// 
+	// 
+
+
+
+
+
 
 }
 

@@ -29,10 +29,9 @@ uniform float lineWidth;
 uniform mat4 modelViewProjectionMatrix;
 uniform mat4 inverseModelViewProjectionMatrix;
 
-uniform vec2 delayedLensPosition;
-uniform float actionStart;
-uniform float actionEnd;
-uniform float time;
+//uniform vec2 delayedLensPosition;
+
+// uniform float time;
 uniform vec2 viewportSize;
 
 
@@ -46,7 +45,7 @@ float easeInOut(float t) {
 };
 
 
-#include "/lens.glsl"
+#include "/lens.glsl" //! /lens.glsl
 
 
 // Catmull rom, (TODO currently not used)

@@ -2,7 +2,13 @@
 const float GOLDEN_RATIO_CONJUGATE = 0.618033988749895f;
 const float PI = 3.141592653589793f;
 
-
+float easeOutElastic(float t){
+	float c = (2 * PI) / 3;
+	if(t==0) return 0;
+	if(t==1) return 1;
+	
+	return pow(2, -10 * t) * sin((t * 10 - 0.75) * c) + 1;
+}
 
 
 /* source: https://gist.github.com/gre/1650294 and visualizations of the functions: https://easings.net/en

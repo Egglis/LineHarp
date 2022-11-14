@@ -35,7 +35,7 @@ namespace lineweaver
 	public:
 		LineRenderer(Viewer *viewer);
 		virtual void display();
-		void handleAction();
+		void handleAction(bool start);
 	private:
 		
 		LinkedListRendering* renderingStrategy = NULL;
