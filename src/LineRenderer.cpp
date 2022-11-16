@@ -367,15 +367,24 @@ void LineRenderer::display()
 		ImGui::SliderFloat("Lens Depth", &viewer()->m_lensDepthValue, 0.0f, 1.0f);
 		m_lensDepthValue = viewer()->getLensDepthValue();
 
-
-		float const tmplensDisp = m_lensDisp;
-
+		const float prevLensDisp = m_lensDisp;
 		ImGui::SliderFloat("Lens Displacment ", &m_lensDisp, 0.0f, 1.0f);
 
-		// If action is not running 
+		// If angual brushing then scroll wheel on angular brushing is prioratized 
 		if (!m_enableAngularBrush) {
-			m_lensDisp = max(0.0f, viewer()->m_scrollWheelAngle / 90);
-			//m_action = m_lensDisp != tmplensDisp;
+
+			// Convert angle into 0 -> 1 range
+			const float oldRange = (90.0f - (-90.0f));
+			const float newRange = (1.0f - 0.0f);
+			float newValue = ((viewer()->m_scrollWheelAngle - (-90)) * newRange) / oldRange;
+			m_lensDisp = newValue;
+		}
+		if (!m_dispAction) {
+			if (m_lensDisp != prevLensDisp) {
+				m_dispAction = true;
+				m_previousLensDisp = prevLensDisp;
+				m_time = 0.0f;
+			}
 		}
 
 		ImGui::SliderFloat("Brushing Angle", &m_brushingAngle, -90.0f, 90.0f);
@@ -414,8 +423,22 @@ void LineRenderer::display()
 		double mouseX, mouseY;
 		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
 
+		glm::vec2 tempLensPosition = m_lensPosition;
 		m_lensPosition = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
+		//float fT = 0.5;
+		//m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
 
+		//globjects::debug() << m_delayedLensPosition.x << ", " << m_delayedLensPosition.y << " - " << m_lensPosition.x << ", " << m_lensPosition.y << std::endl;
+		/*
+		if (tempLensPosition != m_lensPosition) {
+			if (!m_action) {
+				m_actionStart = 0.0f;
+			}
+
+		
+			m_action = true;
+		}
+		*/
 	}
 
 
@@ -511,15 +534,14 @@ void LineRenderer::display()
 	float currTime = glfwGetTime();
 	float deltaTime = currTime - m_prevTime;
 
-	m_time += deltaTime;
-	globjects::debug() << m_time << std::endl;
-	if(m_time >= 0.5f){ // 0.25 sec passed
-		globjects::debug() << "Update DL" << std::endl;
-		m_time = 0.0f;
-		globjects::debug() << m_time << std::endl;
-
-		m_delayedLensPosition = m_lensPosition;
+	if (m_dispAction) {
+		m_time += deltaTime;
+		if (m_time >= ANIMATION_LENGTH) { 
+			m_time = 1.0f;
+			m_dispAction = false;
+		}
 	}
+
 
 	m_prevTime = currTime;
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -597,8 +619,8 @@ void LineRenderer::display()
 	programLine->setUniform("brushingAngle", m_brushingAngle);
 	programLine->setUniform("lensDepthValue", m_lensDepthValue);
 	programLine->setUniform("lensDisp", m_lensDisp);
-	programLine->setUniform("actionStart", m_actionStart);
-	programLine->setUniform("actionEnd", m_actionEnd);
+	programLine->setUniform("prevLensDisp", m_previousLensDisp);
+
 	programLine->setUniform("time", m_time);
 
 
@@ -774,18 +796,4 @@ void LineRenderer::display()
 	currentState->apply();
 }
 
-void lineweaver::LineRenderer::handleAction(bool start)
-{
-
-	// On Mouse Move, Event Start -> 0 - 1, in 1 second with ease in and out
-	// On Mouse move again, Event End -> 0 - 1, with ease in and out, and start new Event Start
-	// 
-	// 
-
-
-
-
-
-
-}
 

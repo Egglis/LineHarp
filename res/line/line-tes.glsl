@@ -45,7 +45,7 @@ float easeInOut(float t) {
 };
 
 
-#include "/lens.glsl" //! /lens.glsl
+#include "/lens.glsl"
 
 
 // Catmull rom, (TODO currently not used)
@@ -103,6 +103,7 @@ void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 
 
 
+
 void main(){
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
@@ -113,13 +114,21 @@ void main(){
 	vec4 p3 = pp3;
 
 
-
-	// du: delimiter, t0, t1, t2 (previous, current, next) t-values 
 	int vertexIndex = int(round(u * totalPoints)); 
 	float du = 1.0f/totalPoints;
+
+	/*
+	vec3 pcn = calulateInterpolationValues(p1, p2, u);
+	float t0 = pcn.x;
+	float t1 = pcn.y;
+	float t2 = pcn.z;
+	*/
+	
+	
 	float t0 = u-du;
 	float t1 = u;
 	float t2 = u+du;
+	
 
 	// Importance is interpolated
 

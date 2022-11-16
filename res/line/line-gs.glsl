@@ -87,7 +87,7 @@ void main() {
 	spawnPoint(vsOut[0].left, 0);
 	spawnPoint(vsOut[0].right, 0);
 
-	
+
 	spawnPoint(vsOut[1].left, 1);
 	spawnPoint(vsOut[1].right, 1);
 

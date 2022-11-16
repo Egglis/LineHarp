@@ -40,6 +40,7 @@ void lineweaver::LinkedListRendering::prepareIndicesBuffer()
 		std::vector<GLuint> temp;
 		m_indices.push_back(temp);
 
+		// Since first/last vertex is already handles
 		int timeSteps = m_dataTable->m_numberOfTimesteps.at(i);
 		for (int j = 0; j < timeSteps - 3; j++) {
 			m_indices.at(i).push_back(index);

@@ -35,7 +35,6 @@ namespace lineweaver
 	public:
 		LineRenderer(Viewer *viewer);
 		virtual void display();
-		void handleAction(bool start);
 	private:
 		
 		LinkedListRendering* renderingStrategy = NULL;
@@ -117,13 +116,21 @@ namespace lineweaver
 		std::vector<unsigned int> m_visiblePixelsPerTrajectory;
 		double m_overplottingRatio = 0.0;
 
-		float m_actionStart = 0.0f;
-		float m_actionEnd = 1.0f;
-		double m_prevTime = NULL;
-		bool m_action = false;
-		float m_time = 0.0;
+		// Depth Mode
 		float m_lensDepthValue = 1.0f;
 		bool m_enableLensDepth = false;
+
+
+		// Animation
+		double m_prevTime = NULL;
+		float m_time = 0.0;
+
+		bool m_dispAction = false;
+		float m_previousLensDisp = 0.0f;
+		const float ANIMATION_LENGTH = 0.5;
+
+
+
 
 		// ------------------------------------------------------------------------------------------
 	};

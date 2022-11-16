@@ -10,6 +10,31 @@ float easeOutElastic(float t){
 	return pow(2, -10 * t) * sin((t * 10 - 0.75) * c) + 1;
 }
 
+float easeOutQuad(float t){
+	if(t < 0.5f){
+		return 2*t*t; 
+	}else{
+		return -1+(4-2*t)*t;
+	}
+}
+
+/*
+float EaseInExpo(float x)
+{
+  return pow(2.0, 10.0 * x - 10.0);
+}
+
+float EaseOutExpo(float x)
+{  
+  return 1.0 - pow(2.0, -10.0 * x);;
+}
+
+float EaseOutInExpo(float x){
+    if (x < 0.5) return EaseOutExpo (2.0*x) * 0.5;
+    return EaseInExpo(2.0*x - 1.0)/2.0 + 0.5;
+}
+*/
+
 
 /* source: https://gist.github.com/gre/1650294 and visualizations of the functions: https://easings.net/en
  * also relevant: https://github.com/AndrewRayCode/easing-utils/blob/master/src/easing.js
