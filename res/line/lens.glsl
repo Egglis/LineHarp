@@ -19,7 +19,8 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 	point.x *= aspectRatio;
 	lPos.x *= aspectRatio;
 
-	float dist = distance(lPos, point.xyz);
+	float dist = point.z > lensDepthValue ? distance(lPos.xy, point.xy) : distance(lPos, point.xyz);
+
 #else
 	vec2 lPos = lensPos;
 
@@ -27,6 +28,7 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 	lPos.x *= aspectRatio;
 
 	float dist = distance(lPos, point.xy);
+
 #endif
 
 	return dist;
