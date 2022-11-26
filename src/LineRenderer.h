@@ -4,6 +4,8 @@
 // currently supported rendering strategies
 #include "RenderingStrategies/RenderingStrategy.h"
 #include "RenderingStrategies/LinkedListRendering.h"
+#include "UiRenderer.h"
+
 
 #include <memory>
 
@@ -37,6 +39,9 @@ namespace lineweaver
 		virtual void display();
 	private:
 		
+
+
+
 		LinkedListRendering* renderingStrategy = NULL;
 
 		std::unique_ptr<globjects::VertexArray> m_vao = std::make_unique<globjects::VertexArray>();
@@ -70,60 +75,21 @@ namespace lineweaver
 		std::unique_ptr<globjects::Framebuffer> m_lineFramebuffer = nullptr;
 
 		// GUI variables ----------------------------------------------------------------------------
-
-		// supported render modes
-		int m_coloringMode = 0;			// 0-None, 1-Importance, 2-Depth, 3-Random
-
-		// allow the user to arbitrarily scale both axes
-		float m_xAxisScaling = 1.0f;
-		float m_yAxisScaling = 1.0f;
-
-		// store combo ID of selected file
-		std::string m_dataFilename;
-		std::string m_importanceFilename;
-		
-		// allow highlighting a single trajectory
-		bool m_enableFocusLine = false;
-		int m_focusLineID = 0;
-
-		// add support for line halos
-		bool m_enableLineHalos = true;
-
-		// Line Parameters
-		float m_lineWidth = 16.0f;
-		float m_smoothness = (1.0f/3.0f);		// weight used for soft depth compositing
-
-		// provide modulation of importance
-		int m_easeFunctionID = 0;
-
-		// since overplotting measuring reduced performance, it is triggered by a button
-		bool m_calculateOverplottingIndex = false;
-		bool m_displayOverplottingGUI = false;
-
-		// support focus lense feature
-		bool m_enableLens = false;
-		float m_lensRadius = 0.15f;
+		UiRenderer m_uiRenderer;
 
 		glm::vec2 m_lensPosition;
 		glm::vec2 m_delayedLensPosition;
-
-		// support for angular brush
-		bool m_enableAngularBrush = false;
-		float m_lensDisp= 0.0f;
-		float m_brushingAngle = 0.0f;
 
 		std::vector<unsigned int> m_totalPixelsPerTrajectory;
 		std::vector<unsigned int> m_visiblePixelsPerTrajectory;
 		double m_overplottingRatio = 0.0;
 
-		// Depth Mode
-		float m_lensDepthValue = 1.0f;
-		bool m_enableLensDepth = false;
-
 
 		// Animation
 		double m_prevTime = NULL;
 		float m_time = 0.0;
+		float m_testTimer = 0.0;
+		float m_foldTimer = 0.0;
 
 		bool m_dispAction = false;
 		float m_previousLensDisp = 0.0f;
