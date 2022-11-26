@@ -92,6 +92,8 @@ void main() {
 	spawnPoint(vsOut[1].right, 1);
 
 	// Debugging Tesselation control shader
+
+
 	//spawnPoint(gl_in[1].gl_Position, 1);
 	//spawnPoint(gl_in[1].gl_Position, 1);
 

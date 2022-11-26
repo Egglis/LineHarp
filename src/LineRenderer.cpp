@@ -3,6 +3,7 @@
 #include <globjects/State.h>
 #include <iostream>
 #include <filesystem>
+
 #include <imgui.h>
 #include "Viewer.h"
 #include "Scene.h"
@@ -27,7 +28,7 @@ using namespace gl;
 using namespace glm;
 using namespace globjects;
 
-LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
+LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer()
 {
 	Shader::hintIncludeImplementation(Shader::IncludeImplementation::Fallback);
 
@@ -50,10 +51,10 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 	{ GL_TESS_EVALUATION_SHADER, "./res/line/line-tes.glsl"},
 	{ GL_GEOMETRY_SHADER,"./res/line/line-gs.glsl" },
 	{ GL_FRAGMENT_SHADER,"./res/line/line-fs.glsl" },
-	},
+		},
 	{
 		"./res/line/globals.glsl",
-		"./res/line/lens.glsl" 
+		"./res/line/lens.glsl"
 	});
 
 	createShaderProgram("blur", {
@@ -81,7 +82,7 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 	m_depthTexture = Texture::create(GL_TEXTURE_2D);
 	m_depthTexture->setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	m_depthTexture->setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	m_depthTexture->setParameter(GL_TEXTURE_BORDER_COLOR, vec4(1.0,1.0,1.0,1.0));
+	m_depthTexture->setParameter(GL_TEXTURE_BORDER_COLOR, vec4(1.0, 1.0, 1.0, 1.0));
 	m_depthTexture->setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	m_depthTexture->setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	m_depthTexture->image2D(0, GL_DEPTH_COMPONENT, m_framebufferSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
@@ -113,7 +114,9 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer)
 	m_lineFramebuffer = Framebuffer::create();
 	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT0, m_lineChartTexture.get());
 	m_lineFramebuffer->attachTexture(GL_DEPTH_ATTACHMENT, m_depthTexture.get());
-	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
+	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+
+
 }
 
 void LineRenderer::display()
@@ -123,12 +126,12 @@ void LineRenderer::display()
 	if (viewer()->viewportSize() != m_framebufferSize)
 	{
 		m_framebufferSize = viewer()->viewportSize();
-		
+
 		m_lineChartTexture->image2D(0, GL_RGBA32F, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		m_depthTexture->image2D(0, GL_DEPTH_COMPONENT, m_framebufferSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
 		m_offsetTexture->image2D(0, GL_R32UI, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
 
-		for (int i=0;i<2;i++)
+		for (int i = 0; i < 2; i++)
 			m_blurTexture[i]->image2D(0, GL_RGBA, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	}
 
@@ -174,52 +177,34 @@ void LineRenderer::display()
 	static bool dataChanged = false;
 	static bool importanceChanged = false;
 
-	// Scatterplot GUI --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 	ImGui::Begin("Importance Driven Dense Line Graphs");
 
-	if (ImGui::CollapsingHeader("CSV-Files", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		static int fileMode = 0;
-		ImGui::Combo("File Mode", &fileMode, "Trajectory\0Series\0");
+	if (ImGui::CollapsingHeader("CSV-Files", ImGuiTreeNodeFlags_DefaultOpen)) {
+		bool fileChanged = m_uiRenderer.dataFile();
 
-		std::string oldDataFilename = m_dataFilename;
+		if (fileChanged || viewer()->enforcedDataRefresh()) {
 
-		if (ImGui::Button("Browse##1"))
-		{
-			const char* filterExtensions[] = { "*.csv" };
-			const char* openfileName = tinyfd_openFileDialog("Open Data File", "./", 1, filterExtensions, "CSV Files (*.csv)", 0);
-
-			if (openfileName)
-				m_dataFilename = std::string(openfileName);
-		}
-
-		ImGui::SameLine();
-		ImGui::InputTextWithHint("Data File", "Press button to load new file", (char*)m_dataFilename.c_str(), m_dataFilename.size(), ImGuiInputTextFlags_ReadOnly);
-
-		if (m_dataFilename != oldDataFilename || viewer()->enforcedDataRefresh())
-		{
-			//std::cout << "File selection event - " << "File: " << m_fileDataID << "\n";
-			// initialize data able
-			if (fileMode == 0) {
-				viewer()->scene()->tableData()->load(m_dataFilename);
+			// initialize data table
+			if (m_uiRenderer.fileMode == 0) {
+				viewer()->scene()->tableData()->load(m_uiRenderer.dataFilename);
 			}
-			else
-			{	
-				if (m_dataFilename.find("AndrewsPlot") != std::string::npos ) {
+			else {
+				if (m_uiRenderer.dataFilename.find("AndrewsPlot") != std::string::npos) {
 
 					// if data set is an andrews plot (currently indicated by name) 
 					// first, load data without duplicating first and last entry
-					viewer()->scene()->tableData()->loadAndrewsSeries(m_dataFilename);
+					viewer()->scene()->tableData()->loadAndrewsSeries(m_uiRenderer.dataFilename);
 
 					// second, perform andrews transformation
 					viewer()->scene()->tableData()->andrewsTransform(96);
 
-				} else {
+				}
+				else {
 
 					// otherwise, load series duplicating first and last element as usual
-					viewer()->scene()->tableData()->loadSeries(m_dataFilename);
+					viewer()->scene()->tableData()->loadSeries(m_uiRenderer.dataFilename);
 				}
+
 			}
 
 			// assign default rendering strategy 
@@ -228,48 +213,35 @@ void LineRenderer::display()
 			// load data and apply implicite importance metric
 			renderingStrategy->prepareDataBuffers();
 
-			if (fileMode == 0)
+			if (m_uiRenderer.fileMode == 0)
 				renderingStrategy->prepareImportanceBuffer();
 			else
 				renderingStrategy->weaveSeries(*viewer()->scene()->tableData());
 
 
-			if(renderingStrategy != nullptr)
+			if (renderingStrategy != nullptr)
 			{
 				// reset importance to default if file was updated otherwise keep it
-				if(m_dataFilename != oldDataFilename)
+				if (fileChanged)
 					importanceChanged = true;
 
 				// update status
 				dataChanged = true;
-				m_displayOverplottingGUI = false;
+				m_uiRenderer.displayOverplottingGUI = false;
 			}
 		}
+		fileChanged = m_uiRenderer.impFile();
 
-		std::string oldImportanceFilename = m_importanceFilename;
-		
-		if (ImGui::Button("Browse##2"))
-		{
-			const char* filterExtensions[] = { "*.csv" };
-			const char* openfileName = tinyfd_openFileDialog("Open Data File", "./", 1, filterExtensions, "CSV Files (*.csv)", 0);
-
-			if (openfileName)
-				m_importanceFilename = std::string(openfileName);
-		}
-
-		ImGui::SameLine();
-		ImGui::InputTextWithHint("Importance File", "Press button to load new file", (char*)m_importanceFilename.c_str(), m_importanceFilename.size(), ImGuiInputTextFlags_ReadOnly);
-
-		if ((oldImportanceFilename != m_importanceFilename || viewer()->enforcedImportanceRefresh()) && renderingStrategy != NULL)
+		if ((fileChanged || viewer()->enforcedImportanceRefresh()) && renderingStrategy != NULL)
 		{
 			// initialize importance table
-			viewer()->scene()->tableImportance()->load(m_importanceFilename);
+			viewer()->scene()->tableImportance()->load(m_uiRenderer.importanceFilename);
 
 			// load external importance data
 			renderingStrategy->prepareImportanceBuffer(viewer()->scene()->tableImportance());
 
 			importanceChanged = true;
-			m_displayOverplottingGUI = false;
+			m_uiRenderer.displayOverplottingGUI = false;
 		}
 
 		if (dataChanged)
@@ -293,8 +265,8 @@ void LineRenderer::display()
 			// Scaling the model's bounding box to the canonical view volume
 			vec3 boundingBoxSize = viewer()->scene()->tableData()->maximumBounds() - viewer()->scene()->tableData()->minimumBounds();
 			float maximumSize = std::max({ boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z });
-			mat4 modelTransform = scale(vec3(2.0f) / vec3(1.25f*boundingBoxSize.x, 1.25f*boundingBoxSize.y,1.0));
-			modelTransform = modelTransform * translate(-0.5f*(viewer()->scene()->tableData()->minimumBounds() + viewer()->scene()->tableData()->maximumBounds()));
+			mat4 modelTransform = scale(vec3(2.0f) / vec3(1.25f * boundingBoxSize.x, 1.25f * boundingBoxSize.y, 1.0));
+			modelTransform = modelTransform * translate(-0.5f * (viewer()->scene()->tableData()->minimumBounds() + viewer()->scene()->tableData()->maximumBounds()));
 			viewer()->setModelTransform(modelTransform);
 
 			// store diameter of current line chart and initialize light position
@@ -303,12 +275,12 @@ void LineRenderer::display()
 			// initial position of the light source (azimuth 120 degrees, elevation 45 degrees, 5 times the distance to the object in center) ---------------------------------------------------------------------------------------------------------
 			glm::mat4 viewTransform = viewer()->viewTransform();
 			glm::vec3 initLightDir = normalize(glm::rotate(glm::mat4(1.0f), glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(120.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-			glm::mat4 newLightTransform = glm::inverse(viewTransform)*glm::translate(mat4(1.0f), (5 * viewer()->m_lineChartDiameter*initLightDir))*viewTransform;
+			glm::mat4 newLightTransform = glm::inverse(viewTransform) * glm::translate(mat4(1.0f), (5 * viewer()->m_lineChartDiameter * initLightDir)) * viewTransform;
 			viewer()->setLightTransform(newLightTransform);
 			//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 			// reset values
-			m_focusLineID = 0;
+			m_uiRenderer.focusLineID = 0;
 
 			// update status
 			dataChanged = false;
@@ -330,92 +302,25 @@ void LineRenderer::display()
 			importanceChanged = false;
 		}
 
-		ImGui::Combo("Ease Function", &m_easeFunctionID, "Linear\0In Sine\0Out Sine\0In Out Sine\0In Quad\0Out Quad\0In Out Quad\0In Cubic\0Out Cubic\0In Out Cubic\0In Quart\0Out Quart\0In Out Quart\0In Quint\0Out Quint\0In Out Quitn\0In Expo\0Out Expo\0In Out Expo\0");
+
+		ImGui::Combo("Ease Function", &m_uiRenderer.easeFunctionID, "Linear\0In Sine\0Out Sine\0In Out Sine\0In Quad\0Out Quad\0In Out Quad\0In Cubic\0Out Cubic\0In Out Cubic\0In Quart\0Out Quart\0In Out Quart\0In Quint\0Out Quint\0In Out Quitn\0In Expo\0Out Expo\0In Out Expo\0");
 	}
 
-	// allow the user to arbitrarily scale both axes
-	ImGui::SliderFloat("x-Axis Scale", &m_xAxisScaling, 0.1f, 10.0f);
-	ImGui::SliderFloat("y-Axis Scale", &m_yAxisScaling, 0.1f, 10.0f);
-
-	if (ImGui::Button("Reset"))
-	{
-		m_xAxisScaling = 1.0f;
-		m_yAxisScaling = 1.0f;
-	}
-
-	if (ImGui::CollapsingHeader("Line Properties", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-
-		ImGui::Combo("Color Mode", &m_coloringMode, "None\0Importance\0Depth\0Random\0");
-		ImGui::SliderFloat("Line Width", &m_lineWidth, 1.0f, 128.0f);
-		ImGui::SliderFloat("Smoothness", &m_smoothness, 0.0f, 1.0f);
-		
-		ImGui::Checkbox("Enable Line-Halos", &m_enableLineHalos);
-
-		ImGui::Checkbox("Enable Focus-Line", &m_enableFocusLine);
-		ImGui::SliderInt("Focus-Line", &m_focusLineID, 0, viewer()->scene()->tableData()->m_numberOfTrajectories - 1);
-	}
-
-	if (ImGui::CollapsingHeader("Lens Feature", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		ImGui::SliderFloat("Lens Radius", &m_lensRadius, 0.0f, 1.0f);
-
-		ImGui::Checkbox("Enable Focus-Lens", &m_enableLens);
-		ImGui::Checkbox("Enable Angular-Brushing", &m_enableAngularBrush);
-		ImGui::Checkbox("Enable Lens Depth", &m_enableLensDepth);
-
-		ImGui::SliderFloat("Lens Depth", &viewer()->m_lensDepthValue, 0.0f, 1.0f);
-		m_lensDepthValue = viewer()->getLensDepthValue();
-
-		const float prevLensDisp = m_lensDisp;
-		ImGui::SliderFloat("Lens Displacment ", &m_lensDisp, 0.0f, 1.0f);
-
-		// If angual brushing then scroll wheel on angular brushing is prioratized 
-		if (!m_enableAngularBrush) {
-
-			// Convert angle into 0 -> 1 range
-			const float oldRange = (90.0f - (-90.0f));
-			const float newRange = (1.0f - 0.0f);
-			float newValue = ((viewer()->m_scrollWheelAngle - (-90)) * newRange) / oldRange;
-			m_lensDisp = newValue;
-		}
-		if (!m_dispAction) {
-			if (m_lensDisp != prevLensDisp) {
-				m_dispAction = true;
-				m_previousLensDisp = prevLensDisp;
-				m_time = 0.0f;
-			}
-		}
-
-		ImGui::SliderFloat("Brushing Angle", &m_brushingAngle, -90.0f, 90.0f);
-
-		if (m_enableAngularBrush) {
-			m_brushingAngle = viewer()->m_scrollWheelAngle;
-		}
-		
-	}
-
-	if (ImGui::CollapsingHeader("Overplotting Measurement", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		if (ImGui::Button("Compute") || viewer()->enforcedOverplottingComp())
-		{
-			m_calculateOverplottingIndex = true;
-			m_displayOverplottingGUI = false;
-		}
-
-		if(m_displayOverplottingGUI){
-
-			// print result
-			ImGui::Text("Overplotting index = %f", m_overplottingRatio);
-
-			// print individual sub-results
-			for (int i = 0; i < viewer()->scene()->tableData()->m_numberOfTrajectories; i++) {
-				ImGui::Text("Trajectory %i = %u out of %u", i, m_visiblePixelsPerTrajectory.at(i), m_totalPixelsPerTrajectory.at(i));
-			}
-		}
-	}
+	m_uiRenderer.scaling();
+	m_uiRenderer.linePropreties(viewer());
+	m_uiRenderer.lensFeature(viewer());
+	m_uiRenderer.overplottingMeasurment(viewer());
 
 	ImGui::End();
+	if (!m_dispAction) {
+		if (m_uiRenderer.lensDisp != m_previousLensDisp) {
+			m_dispAction = true;
+			m_time = 0.0f;
+		}
+	}
+
+	m_previousLensDisp = m_uiRenderer.lensDisp;
+
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -428,17 +333,7 @@ void LineRenderer::display()
 		//float fT = 0.5;
 		//m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
 
-		//globjects::debug() << m_delayedLensPosition.x << ", " << m_delayedLensPosition.y << " - " << m_lensPosition.x << ", " << m_lensPosition.y << std::endl;
-		/*
-		if (tempLensPosition != m_lensPosition) {
-			if (!m_action) {
-				m_actionStart = 0.0f;
-			}
 
-		
-			m_action = true;
-		}
-		*/
 	}
 
 
@@ -450,76 +345,7 @@ void LineRenderer::display()
 		return;
 	}
 
-	std::string defines = "";
-
-	if (m_coloringMode == 1)
-		defines += "#define IMPORTANCE_AS_OPACITY\n";
-	else if (m_coloringMode == 2)
-		defines += "#define DEPTH_LUMINANCE_COLOR\n";
-	else if(m_coloringMode == 3)
-		defines += "#define RANDOM_LINE_COLORS\n";
-
-	if (m_enableFocusLine)
-		defines += "#define FOCUS_LINE\n";
-
-	if(m_enableLineHalos)
-		defines += "#define LINE_HALOS\n";
-
-	if (LinkedListRendering* r = dynamic_cast<LinkedListRendering*>(renderingStrategy))
-		defines += "#define RS_LINKEDLIST\n";
-
-	if (m_calculateOverplottingIndex)
-		defines += "#define CALCULATE_OVERPLOTTING_INDEX\n";
-
-	if (m_enableLens)
-		defines += "#define LENS_FEATURE\n";
-
-	if (m_enableAngularBrush)
-		defines += "#define ANGULAR_BRUSHING\n";
-
-	if (m_enableLensDepth)
-		defines += "#define LENS_DEPTH\n";
-
-
-
-	if (m_easeFunctionID == 0)
-		defines += "#define EASE_LINEAR\n";
-	else if (m_easeFunctionID == 1)
-		defines += "#define EASE_IN_SINE\n";
-	else if (m_easeFunctionID == 2)
-		defines += "#define EASE_OUT_SINE\n";
-	else if (m_easeFunctionID == 3)
-		defines += "#define EASE_IN_OUT_SINE\n";
-	else if (m_easeFunctionID == 4)
-		defines += "#define EASE_IN_QUAD\n";
-	else if (m_easeFunctionID == 5)
-		defines += "#define EASE_OUT_QUAD\n";
-	else if (m_easeFunctionID == 6)
-		defines += "#define EASE_IN_OUT_QUAD\n";
-	else if (m_easeFunctionID == 7)
-		defines += "#define EASE_IN_CUBIC\n";
-	else if (m_easeFunctionID == 8)
-		defines += "#define EASE_OUT_CUBIC\n";
-	else if (m_easeFunctionID == 9)
-		defines += "#define EASE_IN_OUT_CUBIC\n";
-	else if (m_easeFunctionID == 10)
-		defines += "#define EASE_IN_QUART\n";
-	else if (m_easeFunctionID == 11)
-		defines += "#define EASE_OUT_QUART\n";
-	else if (m_easeFunctionID == 12)
-		defines += "#define EASE_IN_OUT_QUART\n";
-	else if (m_easeFunctionID == 13)
-		defines += "#define EASE_IN_QUINT\n";
-	else if (m_easeFunctionID == 14)
-		defines += "#define EASE_OUT_QUINT\n";
-	else if (m_easeFunctionID == 15)
-		defines += "#define EASE_IN_OUT_QUINT\n";
-	else if (m_easeFunctionID == 16)
-		defines += "#define EASE_IN_EXPO\n";
-	else if (m_easeFunctionID == 17)
-		defines += "#define EASE_OUT_EXPO\n";
-	else if (m_easeFunctionID == 18)
-		defines += "#define EASE_IN_OUT_EXPO\n";
+	std::string defines = m_uiRenderer.generateDefines();
 
 	if (defines != m_shaderSourceDefines->string())
 	{
@@ -536,9 +362,24 @@ void LineRenderer::display()
 
 	if (m_dispAction) {
 		m_time += deltaTime;
-		if (m_time >= ANIMATION_LENGTH) { 
+		if (m_time >= ANIMATION_LENGTH) {
 			m_time = 1.0f;
 			m_dispAction = false;
+		}
+	}
+
+	m_testTimer += deltaTime;
+	if (m_testTimer > 1.0) {
+		m_testTimer = 0.0;
+	}
+
+	// Fold Animation, reset when timer runs out
+	if (viewer()->foldAnimation()) {
+		m_foldTimer += deltaTime;
+		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
+		if (m_foldTimer >= 2.0) {
+			m_foldTimer = 0.0;
+			viewer()->endFoldAnimation();
 		}
 	}
 
@@ -547,7 +388,7 @@ void LineRenderer::display()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Line rendering pass and linked list generation
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	
+
 
 
 	m_lineFramebuffer->bind();
@@ -571,10 +412,10 @@ void LineRenderer::display()
 	glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquationi(0, GL_FUNC_ADD);
 	*/
-	
+
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 1);
-	
+
 	const uint intersectionClearValue = 1;
 	m_intersectionBuffer->clearSubData(GL_R32UI, 0, sizeof(uint), GL_RED_INTEGER, GL_UNSIGNED_INT, &intersectionClearValue);
 
@@ -586,14 +427,14 @@ void LineRenderer::display()
 
 	mat4 modelTransform = viewer()->modelTransform();
 	mat4 inverseModelTransform = inverse(modelTransform);
-	float scaledLineWidth = length(vec2(inverseModelViewProjectionMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f) - inverseModelViewProjectionMatrix *(vec4(m_lineWidth, 0.0f, 0.0f, 1.0f)))/ vec2(viewportSize) );
+	float scaledLineWidth = length(vec2(inverseModelViewProjectionMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f) - inverseModelViewProjectionMatrix * (vec4(m_uiRenderer.lineWidth, 0.0f, 0.0f, 1.0f))) / vec2(viewportSize));
 
 	programLine->setUniform("modelViewProjectionMatrix", modelViewProjectionMatrix);
 	programLine->setUniform("inverseModelViewProjectionMatrix", inverseModelViewProjectionMatrix);
 
 
-	programLine->setUniform("xAxisScaling", m_xAxisScaling);
-	programLine->setUniform("yAxisScaling", m_yAxisScaling);
+	programLine->setUniform("xAxisScaling", m_uiRenderer.xAxisScaling);
+	programLine->setUniform("yAxisScaling", m_uiRenderer.yAxisScaling);
 
 	programLine->setUniform("lineWidth", scaledLineWidth);
 	programLine->setUniform("lineColor", viewer()->lineChartColor());
@@ -603,25 +444,29 @@ void LineRenderer::display()
 	programLine->setUniform("haloColor", viewer()->haloColor());
 	programLine->setUniform("focusLineColor", viewer()->focusLineColor());
 
-	if (m_enableFocusLine) {
-		programLine->setUniform("focusLineID", m_focusLineID);
-	} else {
+	if (m_uiRenderer.enableFocusLine) {
+		programLine->setUniform("focusLineID", m_uiRenderer.focusLineID);
+	}
+	else {
 		programLine->setUniform("focusLineID", -1);
 	}
 
 	programLine->setUniform("lensPosition", m_lensPosition);
 	programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
-	programLine->setUniform("lensRadius", m_lensRadius);
+	programLine->setUniform("lensRadius", m_uiRenderer.lensRadius);
 	programLine->setUniform("viewMatrix", viewMatrix);
 	programLine->setUniform("inverseViewMatrix", inverseViewMatrix);
 
 
-	programLine->setUniform("brushingAngle", m_brushingAngle);
-	programLine->setUniform("lensDepthValue", m_lensDepthValue);
-	programLine->setUniform("lensDisp", m_lensDisp);
-	programLine->setUniform("prevLensDisp", m_previousLensDisp);
+	programLine->setUniform("brushingAngle", m_uiRenderer.brushingAngle);
+	programLine->setUniform("lensDepthValue", m_uiRenderer.lensDepthValue);
+	programLine->setUniform("lensDisp", m_uiRenderer.lensDisp);
+
+	// programLine->setUniform("prevLensDisp", m_uiRenderer.previousLensDisp);
 
 	programLine->setUniform("time", m_time);
+	programLine->setUniform("testTime", m_testTimer);
+	programLine->setUniform("foldTime", m_foldTimer);
 
 
 	m_vao->bind();
@@ -649,14 +494,14 @@ void LineRenderer::display()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Blending dependent on current rendering strategy
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	
+
 	// make sure lines are drawn on top of each other
 	// glDisable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	m_blurFramebuffer->bind();
-	glDepthMask(GL_FALSE);		
+	glDepthMask(GL_FALSE);
 
 
 	m_vaoQuad->bind();
@@ -694,7 +539,7 @@ void LineRenderer::display()
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 1);
 
-	if (m_calculateOverplottingIndex) {
+	if (m_uiRenderer.calculateOverplottingIndex) {
 
 		// reset buffers in case they were already initialized
 		m_totalPixelBuffer = std::make_unique<globjects::Buffer>();
@@ -721,27 +566,27 @@ void LineRenderer::display()
 	programBlend->setUniform("blurTexture", 1);
 
 	programBlend->setUniform("backgroundColor", viewer()->backgroundColor());
-	programBlend->setUniform("smoothness", m_smoothness);
+	programBlend->setUniform("smoothness", m_uiRenderer.smoothness);
 
 	programBlend->setUniform("viewportSize", vec2(viewportSize));
 	programBlend->setUniform("lensPosition", m_lensPosition);
 	programBlend->setUniform("delayedLensPosition", m_delayedLensPosition);
-	programBlend->setUniform("lensRadius", m_lensRadius);
+	programBlend->setUniform("lensRadius", m_uiRenderer.lensRadius);
 	programBlend->setUniform("lensBorderColor", viewer()->lensColor());
-	programBlend->setUniform("lensDepthValue", m_lensDepthValue);
+	programBlend->setUniform("lensDepthValue", m_uiRenderer.lensDepthValue);
 
 	m_vaoQuad->bind();
-	
+
 	programBlend->use();
 	m_vaoQuad->drawArrays(GL_POINTS, 0, 1);
 	programBlend->release();
-	
+
 	m_vaoQuad->unbind();
-	
+
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 
-	if (m_calculateOverplottingIndex) {
+	if (m_uiRenderer.calculateOverplottingIndex) {
 
 		// force GPU to finish work before we start reading
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
@@ -757,28 +602,28 @@ void LineRenderer::display()
 		m_visiblePixelsPerTrajectory.clear();
 
 		for (int i = 0; i < numberOfTrajectories; i++) {
-			
+
 			uint currentTotalPixels = 0;
 			m_totalPixelBuffer->getSubData(i * sizeof(uint), sizeof(uint), &currentTotalPixels);
 			m_totalPixelsPerTrajectory.push_back(currentTotalPixels);
-			
+
 			uint currentVisiblePixels = 0;
 			m_visiblePixelBuffer->getSubData(i * sizeof(uint), sizeof(uint), &currentVisiblePixels);
 			m_visiblePixelsPerTrajectory.push_back(currentVisiblePixels);
 
-			m_overplottingRatio += (double)currentVisiblePixels/ (double)currentTotalPixels;
+			m_overplottingRatio += (double)currentVisiblePixels / (double)currentTotalPixels;
 		}
 
-		m_overplottingRatio = 1-(m_overplottingRatio/numberOfTrajectories);
+		m_overplottingRatio = 1 - (m_overplottingRatio / numberOfTrajectories);
 
 		// release bound SSBO
 		m_totalPixelBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 		m_visiblePixelBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 
-		m_calculateOverplottingIndex = false;
-		
+		m_uiRenderer.calculateOverplottingIndex = false;
+
 		// display results in GUI
-		m_displayOverplottingGUI = true;
+		m_uiRenderer.displayOverplottingGUI = true;
 	}
 	// -------------------------------------------------------------------------------------------------
 

@@ -7,19 +7,27 @@ uniform float prevLensDisp;
 uniform float lensDepthValue;
 uniform vec2 delayedLensPosition;
 uniform float time;
-
+uniform float testTime;
+uniform float foldTime;
 
 // Returns distance to given lens position
 float distanceToLens(vec4 point, vec2 lensPos) {
 	float aspectRatio = viewportSize.x/viewportSize.y;
 
 #ifdef LENS_DEPTH
-	vec3 lPos = vec3(lensPos, lensDepthValue);
+	
+	// Option: 1, Resets the lensDepth after animation is complete 
+	float ldepth = mix(lensDepthValue, 1.0 , foldTime);
+	
+	
+	vec3 lPos = vec3(lensPos, ldepth);
 
 	point.x *= aspectRatio;
 	lPos.x *= aspectRatio;
 
-	float dist = point.z > lensDepthValue ? distance(lPos.xy, point.xy) : distance(lPos, point.xyz);
+
+
+	float dist = point.z > ldepth ? distance(lPos.xy, point.xy) : distance(lPos, point.xyz);
 
 #else
 	vec2 lPos = lensPos;
@@ -42,7 +50,9 @@ float disp(inout vec4 pos, vec2 lensPos) {
 	vec2 normDir = normalize(pos.xy - lensPos);
 
 	float weight = 1.0 - smoothstep(0.0, lensRadius, dist);
-	weight *= (lensRadius*viewportSize.y) * mix(prevLensDisp, lensDisp, easeOutElastic(time*2));
+	weight *= (lensRadius*viewportSize.y) * lensDisp;
+
+	// Interpolate with a custome value 0-1 based on importance (pos.z) and the testTimer
 
 	pos.xy +=  weight * (normDir/viewportSize);	
 	return weight;
@@ -54,13 +64,14 @@ vec4 displace(vec4 pos, float vertexImportance){
 	// Interpolate between delayedLensPosition and lensPosition
 
 	vec4 position = pos;
-
-
 	position.z = vertexImportance;
 
-	disp(position, lensPosition);
-	position.z = 0;
 
+
+	disp(position, lensPosition);
+
+
+	position.z = 0.0;
 	return position;
 }
 

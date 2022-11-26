@@ -1,5 +1,5 @@
 file(GLOB_RECURSE lineweaver_sources *.cpp *.h)
-add_executable(lineweaver ${lineweaver_sources})
+add_executable(lineweaver ${lineweaver_sources} )
 set_target_properties(lineweaver PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 find_package(glm CONFIG REQUIRED)

@@ -74,6 +74,9 @@ namespace lineweaver
 		void setLensDepthValue(float z) { m_lensDepthValue = std::clamp(m_lensDepthValue+z, 0.0f, 1.0f); };
 		float getLensDepthValue() { return m_lensDepthValue; };
 
+		bool foldAnimation() { return m_foldAnimation; };
+		void endFoldAnimation() { m_foldAnimation = false; };
+
 	private:
 
 		void beginFrame();
@@ -138,6 +141,8 @@ namespace lineweaver
 		// check key to enforce overplotting computation
 		bool m_enforceOverplottingComp = false;		// F8
 
+
+		bool m_foldAnimation = false;
 
 	};
 

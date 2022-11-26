@@ -310,6 +310,9 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 				viewer->m_renderers[index]->setEnabled(!enabled);
 			}
 		}
+		else if (key == GLFW_KEY_F && action == GLFW_RELEASE && !viewer->m_foldAnimation) {
+			viewer->m_foldAnimation = true;
+		}
 
 
 		for (auto& i : viewer->m_interactors)
