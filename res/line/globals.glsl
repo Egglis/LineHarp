@@ -18,22 +18,13 @@ float easeOutQuad(float t){
 	}
 }
 
-/*
-float EaseInExpo(float x)
-{
-  return pow(2.0, 10.0 * x - 10.0);
-}
+float easeInOutCirc(float t){
 
-float EaseOutExpo(float x)
-{  
-  return 1.0 - pow(2.0, -10.0 * x);;
+	if (t > 1.0) return t;
+	return t < 0.5
+	  ? (1 - sqrt(1 - pow(2 * t, 2))) / 2
+	  : (sqrt(1 - pow(-2 * t + 2, 2)) + 1) / 2;
 }
-
-float EaseOutInExpo(float x){
-    if (x < 0.5) return EaseOutExpo (2.0*x) * 0.5;
-    return EaseInExpo(2.0*x - 1.0)/2.0 + 0.5;
-}
-*/
 
 
 /* source: https://gist.github.com/gre/1650294 and visualizations of the functions: https://easings.net/en

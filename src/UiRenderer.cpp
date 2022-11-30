@@ -141,6 +141,16 @@ void UiRenderer::overplottingMeasurment(Viewer* viewer) {
 	}
 }
 
+
+void UiRenderer::animationSettings() {
+	if (ImGui::BeginMenu("Animations")) {
+		ImGui::SliderFloat("Global Animation Factor", &globalAnimationFactor, 0.0f, 5.0f);
+		ImGui::Checkbox("Enable Moving Animation:", &movingAnimation);
+		ImGui::EndMenu();
+	}
+
+}
+
 std::string UiRenderer::generateDefines() {
 	std::string defines = "";
 

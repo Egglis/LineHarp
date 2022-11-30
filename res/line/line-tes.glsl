@@ -15,6 +15,9 @@ out vsData {
 	vec4 right;
 } vsOut;
 
+
+
+
 patch in vec4 pp0;
 patch in vec4 pp3;
 patch in int totalPoints;
@@ -131,7 +134,6 @@ void main(){
 	
 
 	// Importance is interpolated
-
 	float imp_p1 = tessOut[0].pointImportance;
 	float imp_p2 = tessOut[1].pointImportance;
 

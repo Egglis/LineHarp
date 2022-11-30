@@ -9,6 +9,16 @@ uniform vec2 delayedLensPosition;
 uniform float time;
 uniform float testTime;
 uniform float foldTime;
+uniform int trajectoryID;
+
+uniform float delayedTValue;
+uniform int focusLineID;
+
+struct Disp {
+	vec2 dir;
+	float weight;
+};
+
 
 // Returns distance to given lens position
 float distanceToLens(vec4 point, vec2 lensPos) {
@@ -17,15 +27,13 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 #ifdef LENS_DEPTH
 	
 	// Option: 1, Resets the lensDepth after animation is complete 
-	float ldepth = mix(lensDepthValue, 1.0 , foldTime);
+	float ldepth = mix(lensDepthValue, 2.0 , foldTime*2.0);
 	
 	
 	vec3 lPos = vec3(lensPos, ldepth);
 
 	point.x *= aspectRatio;
 	lPos.x *= aspectRatio;
-
-
 
 	float dist = point.z > ldepth ? distance(lPos.xy, point.xy) : distance(lPos, point.xyz);
 
@@ -44,7 +52,7 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 
 
 // Displace a point
-float disp(inout vec4 pos, vec2 lensPos) {
+Disp disp(vec4 pos, vec2 lensPos) {
 
 	float dist = distanceToLens(pos, lensPos);
 	vec2 normDir = normalize(pos.xy - lensPos);
@@ -54,25 +62,47 @@ float disp(inout vec4 pos, vec2 lensPos) {
 
 	// Interpolate with a custome value 0-1 based on importance (pos.z) and the testTimer
 
-	pos.xy +=  weight * (normDir/viewportSize);	
-	return weight;
+	//pos.xy +=  weight * (normDir/viewportSize);	
+
+	return Disp(normDir/viewportSize, weight);
 }
 
 
-vec4 displace(vec4 pos, float vertexImportance){
+
+vec4 lensDisplacment(vec4 pos, float vertexImportance) {
 	
 	// Interpolate between delayedLensPosition and lensPosition
 
 	vec4 position = pos;
 	position.z = vertexImportance;
 
+	vec4 delayedPosition = position;
+	Disp orgDisp = disp(position, lensPosition);
+	Disp dlDisp = disp(delayedPosition, delayedLensPosition);
 
-
-	disp(position, lensPosition);
+	const float mixingFactor = 0.2;
+	position.xy += orgDisp.dir * mix(mix(orgDisp.weight , dlDisp.weight, mixingFactor) , 0.0, delayedTValue);
 
 
 	position.z = 0.0;
 	return position;
+
+}
+
+
+
+vec4 displace(vec4 pos, float vertexImportance){
+
+#ifdef FOCUS_LINE
+	if(focusLineID == trajectoryID){
+		return pos;
+	}
+#endif
+#ifdef LENS_FEATURE
+	return lensDisplacment(pos, vertexImportance);
+#endif
+
+	return pos;
 }
 
 
@@ -83,8 +113,8 @@ int lazyTesselation(vec4 p1, vec4 p2) {
 	int totalDisplacedPoints = 0;
 	for(float t = 0.0; t <= 1.0; t += (1.0/float(MAX_POINTS) )) {
 		vec4 currPoint = mix(p1, p2, t);
-		bool isDisplaced = disp(currPoint, lensPosition) > 0.0;
-		if(isDisplaced) {
+		Disp disp = disp(currPoint, lensPosition);
+		if(disp.weight > 0.0) {
 			return MAX_POINTS;
 		}
 	}
@@ -119,9 +149,22 @@ vec2 lensIntersection(vec4 p1, vec4 p2){
 	
 }
 
+float rxEase2(float x, float k, float c)
+{
+    k = clamp(k, 0.0001, 10000.0); // clamp optional, if you know your k
+    x = 0.5 - x; // re-center at 0
+    float s = sign(x);
+    x = clamp(abs(x) * 2.0, 0.0, 1.0);
+    return c + 0.5 * s * x / (x * (k - 1.0) - k);
+}
+
+
 // Project linear t-values onto a stepping function defined by lens radius
 float projection(float t, float entry, float exit){
+	
 	float v = (smoothstep(0.0, 0.0, t) * entry) + t*(exit-entry) + step(1.0, t);
+
+
 	return clamp(v, 0.0, 1.0);
 
 }
@@ -130,7 +173,25 @@ float projection(float t, float entry, float exit){
 float calcT(vec4 p1, vec4 p2, float t){
 	vec2 entryExit = lensIntersection(p1, p2);
 	float value = projection(t, entryExit.x, entryExit.y);
+
 	return value;
+}
+
+
+float compT(vec4 p1, vec4 p2, float t) {
+	
+	vec4 prevPos = vec4(-1);
+	
+	float maxWeight = 0.0;
+	for(float x = 0.0; x <= 1.0; x += 1.0 / float(MAX_POINTS)){
+		vec4 currPos = mix(p1, p2, x);
+		Disp disp = disp(currPos, lensPosition);
+
+
+		maxWeight = max(maxWeight, disp.weight);
+	}
+
+	return 0.5;
 }
 
 
@@ -154,4 +215,8 @@ vec3 calulateInterpolationValues(vec4 p1, vec4 p2, float t){
 
 	return vec3(prev, curr, next);
 }
+
+
+
+
 

@@ -21,7 +21,7 @@ uniform vec2 lensPosition;
 uniform float lensRadius;
 uniform vec3 lensBorderColor;
 uniform vec2 delayedLensPosition;
-uniform vec2[10] dlp; 
+
 
 
 struct BufferEntry
@@ -82,7 +82,7 @@ void main()
 	uint indices[maxEntries];
 	uint indices2[maxEntries];
 
-	uint offset = texelFetch(offsetTexture,ivec2(gl_FragCoord.xy),0).r;
+	uint offset = texelFetch(offsetTexture, ivec2(gl_FragCoord.xy),0).r;
 
 	while (offset > 0)
 	{
@@ -243,23 +243,13 @@ void main()
 	{
 		lineChartTexture.rgb = mix(lineChartTexture.rgb, lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance));
 	}
-	
-	float pxlDistance2 = length((delayedLensPosition-ndCoordinates) * vec2(aspectRatio, 1.0));
-	
-	/*
-	// Debug delayed lens position
-	if(pxlDistance2 >= startInner && pxlDistance2 <= lensRadius)
-	{
-		lineChartTexture.rgb = mix(vec3(0,1,0), lensBorderColor, smoothstep(startInner, lensRadius, pxlDistance2));
-	}
-	else if (pxlDistance2 > lensRadius && pxlDistance2 <= endOuter)
-	{
-		lineChartTexture.rgb = mix(vec3(0,1,0), lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance2));
-	}
-	*/
-	/*
-	for(int i = 0; i < 10; i++) {
-		float pxlDistance2 = length((dlp[i]-ndCoordinates) * vec2(aspectRatio, 1.0));
+
+
+
+	/*	Debugging the delayed lens position 
+		
+
+		float pxlDistance2 = length((delayedLensPosition-ndCoordinates) * vec2(aspectRatio, 1.0));
 	
 	
 		// Debug delayed lens position
@@ -271,8 +261,8 @@ void main()
 		{
 			lineChartTexture.rgb = mix(vec3(0,1,0), lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance2));
 		}
-	}
 	*/
+	
 
 
 

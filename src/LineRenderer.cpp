@@ -111,11 +111,11 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer()
 	m_blurFramebuffer->attachTexture(GL_DEPTH_ATTACHMENT, m_depthTexture.get());
 	m_blurFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0 });
 
+
 	m_lineFramebuffer = Framebuffer::create();
 	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT0, m_lineChartTexture.get());
 	m_lineFramebuffer->attachTexture(GL_DEPTH_ATTACHMENT, m_depthTexture.get());
 	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
-
 
 }
 
@@ -176,6 +176,9 @@ void LineRenderer::display()
 	// boolean variables used to automatically update data and importance
 	static bool dataChanged = false;
 	static bool importanceChanged = false;
+
+	m_uiRenderer.animationSettings();
+
 
 	ImGui::Begin("Importance Driven Dense Line Graphs");
 
@@ -284,6 +287,8 @@ void LineRenderer::display()
 
 			// update status
 			dataChanged = false;
+			initLensPosition = true;
+
 		}
 
 		if (importanceChanged)
@@ -296,10 +301,13 @@ void LineRenderer::display()
 				vertexBinding->setBuffer(m_importanceColumnBuffer.get(), 0, sizeof(float));
 				vertexBinding->setFormat(1, GL_FLOAT);
 				m_vao->enable(2);
+				globjects::debug() << renderingStrategy->activeImportance() << std::endl;
+
 			}
 
 			// update status
 			importanceChanged = false;
+			initLensPosition = true;
 		}
 
 
@@ -321,7 +329,6 @@ void LineRenderer::display()
 
 	m_previousLensDisp = m_uiRenderer.lensDisp;
 
-
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	if (!viewer()->m_lensDepthChanging) {
@@ -330,9 +337,12 @@ void LineRenderer::display()
 
 		glm::vec2 tempLensPosition = m_lensPosition;
 		m_lensPosition = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
-		//float fT = 0.5;
-		//m_delayedLensPosition = m_delayedLensPosition * (1.0f - fT) + m_lensPosition * fT;
 
+		if (initLensPosition || !m_uiRenderer.movingAnimation) {
+			m_delayedLensPosition = m_lensPosition;
+
+			initLensPosition = false;
+		}
 
 	}
 
@@ -360,6 +370,12 @@ void LineRenderer::display()
 	float currTime = glfwGetTime();
 	float deltaTime = currTime - m_prevTime;
 
+	deltaTime *= m_uiRenderer.globalAnimationFactor;
+
+
+
+
+	// Displacement timer
 	if (m_dispAction) {
 		m_time += deltaTime;
 		if (m_time >= ANIMATION_LENGTH) {
@@ -368,28 +384,62 @@ void LineRenderer::display()
 		}
 	}
 
+
+
+	// Compute the direction vector from delayedLensPosition and lensPosition
+	glm::vec2 target = m_lensPosition;
+	glm::vec2 lensDir = normalize(target - m_delayedLensPosition);
+	float dist = distance(target, m_delayedLensPosition);
+
+	// Compute the force which we push the delayed lens in
+	glm::vec2 force = (lensDir * (dist)) * 0.01f;
+	force *= m_uiRenderer.globalAnimationFactor;
+
+	float t; 
+	if (length(force) < dist) {
+		m_delayedLensPosition += force;
+		t = clamp(dist, 0.0f, 1.0f);
+	}
+	else {
+		t = 0.0;
+	}
+
+	// Test timer for various stuff
 	m_testTimer += deltaTime;
-	if (m_testTimer > 1.0) {
+	if (m_testTimer > 0.1) {
 		m_testTimer = 0.0;
+	}
+	else {
+		if (m_testTimer > 0.1) {
+			m_testTimer = 0.1;
+		}
 	}
 
 	// Fold Animation, reset when timer runs out
 	if (viewer()->foldAnimation()) {
 		m_foldTimer += deltaTime;
 		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
-		if (m_foldTimer >= 2.0) {
+		if (m_foldTimer >= 1.0) {
 			m_foldTimer = 0.0;
 			viewer()->endFoldAnimation();
 		}
 	}
-
 
 	m_prevTime = currTime;
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Line rendering pass and linked list generation
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+	/*
+	if (viewer()->m_mousePressed[0]) {
+		m_clickedLocation = m_lensPosition;
+		globjects::debug() << m_clickedLocation.x << ", " << m_clickedLocation.y << std::endl;
+		globjects::debug() << viewer()->m_mousePressed[0] << std::endl;
+	}
+	else {
+		m_initClickLocation = m_lensPosition;
+	}
+	*/
 
 	m_lineFramebuffer->bind();
 
@@ -413,6 +463,8 @@ void LineRenderer::display()
 	glBlendEquationi(0, GL_FUNC_ADD);
 	*/
 
+
+
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 1);
 
@@ -422,6 +474,9 @@ void LineRenderer::display()
 	const uint offsetClearValue = 0;
 	m_offsetTexture->clearImage(0, GL_RED_INTEGER, GL_UNSIGNED_INT, &offsetClearValue);
 	// -------------------------------------------------------------------------------------------------
+
+
+
 
 	m_offsetTexture->bindImageTexture(0, 0, false, 0, GL_READ_WRITE, GL_R32UI);
 
@@ -453,6 +508,9 @@ void LineRenderer::display()
 
 	programLine->setUniform("lensPosition", m_lensPosition);
 	programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
+	programLine->setUniform("delayedTValue", t);
+
+
 	programLine->setUniform("lensRadius", m_uiRenderer.lensRadius);
 	programLine->setUniform("viewMatrix", viewMatrix);
 	programLine->setUniform("inverseViewMatrix", inverseViewMatrix);
@@ -468,7 +526,7 @@ void LineRenderer::display()
 	programLine->setUniform("testTime", m_testTimer);
 	programLine->setUniform("foldTime", m_foldTimer);
 
-
+	
 	m_vao->bind();
 	glPatchParameteri(GL_PATCH_VERTICES, 4);
 
@@ -477,6 +535,8 @@ void LineRenderer::display()
 
 	programLine->release();
 	m_vao->unbind();
+
+
 
 
 	//m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
@@ -530,8 +590,17 @@ void LineRenderer::display()
 	programBlur->release();
 	m_vaoQuad->unbind();
 
+
+
+
+
+
+
 	glDepthMask(GL_TRUE);
 	m_blurFramebuffer->unbind();
+
+
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	m_lineFramebuffer->bind();
@@ -585,6 +654,7 @@ void LineRenderer::display()
 
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
+
 
 	if (m_uiRenderer.calculateOverplottingIndex) {
 

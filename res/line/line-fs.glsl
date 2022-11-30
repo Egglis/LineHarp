@@ -225,7 +225,6 @@ void main()
 		// use importance for pre-multiplied alpha
 		entry.color = lineChartTexture*opacityMultiplyer;
 	}
-
 	intersections[index] = entry;
 #endif
 	

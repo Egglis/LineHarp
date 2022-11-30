@@ -52,6 +52,9 @@ namespace lineweaver
 		float m_lineChartDiameter = 2.0f*sqrt(3.0f);
 		float m_lensDepthValue = 1.0f;
 		bool m_lensDepthChanging = false;
+		bool m_mousePressed[3] = { false, false, false };
+
+
 
 		void setBackgroundColor(const glm::vec3& c);
 		void setSamplePointColor(const glm::vec3& c);
@@ -101,7 +104,7 @@ namespace lineweaver
 		std::vector<std::unique_ptr<Renderer>> m_renderers;
 
 		double m_time = 0.0;
-		bool m_mousePressed[3] = { false, false, false };
+		//bool m_mousePressed[3] = { false, false, false };
 		float m_mouseWheel = 0.0f;
 
 		std::unique_ptr<globjects::File> m_vertexShaderSourceUi = nullptr;

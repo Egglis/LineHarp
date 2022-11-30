@@ -13,10 +13,12 @@ namespace lineweaver
 	class UiRenderer {
 	public:
 		UiRenderer();
-		void renderUi();
-		bool isDataChanged() { return dataChanged; };
+		void renderUi(); // TODO remove
 		
-		// Collapsing headers:
+		// Animation Settings
+		void animationSettings();
+
+		// Collapsing headers for Line Graph:
 		bool dataFile();
 		bool impFile();
 		void scaling();
@@ -24,6 +26,7 @@ namespace lineweaver
 		void lensFeature(Viewer* viewer);
 		void overplottingMeasurment(Viewer* viewer);
 
+		// Generates the defines.glsl file
 		std::string generateDefines();
 
 
@@ -82,15 +85,13 @@ namespace lineweaver
 		bool enableLensDepth = false;
 
 		// Animation
+		float globalAnimationFactor = 1.0f;
+
 		bool dispAction = false;
 
+		bool movingAnimation = true;
 
-	private:
-
-		Viewer* viewer;
-		bool dataChanged = false;
-
-
+		
 	};
 
 

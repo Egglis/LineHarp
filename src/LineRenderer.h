@@ -8,6 +8,7 @@
 
 
 #include <memory>
+#include <deque>
 
 #include <glm/glm.hpp>
 #include <glbinding/gl/gl.h>
@@ -68,6 +69,8 @@ namespace lineweaver
 		std::unique_ptr<globjects::Texture> m_depthTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_offsetTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_blurTexture[2] = { nullptr, nullptr };
+		std::unique_ptr<globjects::Texture> m_volumeTexture = nullptr;
+
 
 		glm::ivec2 m_framebufferSize;
 
@@ -80,10 +83,12 @@ namespace lineweaver
 		glm::vec2 m_lensPosition;
 		glm::vec2 m_delayedLensPosition;
 
+
 		std::vector<unsigned int> m_totalPixelsPerTrajectory;
 		std::vector<unsigned int> m_visiblePixelsPerTrajectory;
 		double m_overplottingRatio = 0.0;
 
+		bool initLensPosition = true;
 
 		// Animation
 		double m_prevTime = NULL;
@@ -91,7 +96,14 @@ namespace lineweaver
 		float m_testTimer = 0.0;
 		float m_foldTimer = 0.0;
 
+
+		float m_delayTimer = 0.0;
+		std::deque<glm::vec3> m_dlpQueue;
+
 		bool m_dispAction = false;
+		bool m_mouseMoving = false;
+		bool m_mouseStopped = false;
+
 		float m_previousLensDisp = 0.0f;
 		const float ANIMATION_LENGTH = 0.5;
 
