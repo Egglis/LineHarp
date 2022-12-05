@@ -3,6 +3,7 @@
 #include "/globals.glsl"
 
 layout (location = 0) out vec4 lineChartTexture;
+layout (location = 2) out uint IdTexture;
 
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 
@@ -76,6 +77,8 @@ void main()
 	ivec2 fragCoord = ivec2(gl_FragCoord.xy);
 	vec4 blurValue = texelFetch(blurTexture,fragCoord,0);
 
+	IdTexture = -1;
+
 #ifdef RS_LINKEDLIST
 	const uint maxEntries = 256;
 	uint entryCount = 0;
@@ -117,6 +120,10 @@ void main()
 	}
 	//==============================================================================================================
 
+	// Calculate the appropriate Trajectory ID, based on accumelation, And render to ID texture
+
+
+
 #ifdef CALCULATE_OVERPLOTTING_INDEX
 	if(entryCount > 0){
 
@@ -142,7 +149,6 @@ void main()
 	for (int i=0; i<entryCount; i++){
 		
 		uint iIndexI = indices[i];
-		
         if (intersections[iIndexI].color.a > 0.0f){
 			
 			vec4 vecSum = vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -189,7 +195,9 @@ void main()
             vecSum *= intersections[iIndexI].color.a;
  
             blendedColor = porterDuffOverOperator(vecSum,blendedColor);
+			IdTexture = (intersections[iIndexI].id + 1);
 		}
+
     }
 
 	// Option 3: Weighted Blended Order-Independent Transparency ===================================================
@@ -245,9 +253,7 @@ void main()
 	}
 
 
-
-	/*	Debugging the delayed lens position 
-		
+	/*
 
 		float pxlDistance2 = length((delayedLensPosition-ndCoordinates) * vec2(aspectRatio, 1.0));
 	
@@ -261,8 +267,8 @@ void main()
 		{
 			lineChartTexture.rgb = mix(vec3(0,1,0), lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance2));
 		}
+
 	*/
-	
 
 
 

@@ -8,8 +8,10 @@
 
 #include <glbinding/gl/enum.h>
 
+
 namespace lineweaver
 {
+
 	// Base class
 	class RenderingStrategy {
 

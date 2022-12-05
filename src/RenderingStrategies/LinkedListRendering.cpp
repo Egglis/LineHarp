@@ -1,18 +1,20 @@
 #include "LinkedListRendering.h"
 #include <glm/gtc/integer.hpp>
+#include <numeric>
 
 using namespace lineweaver;
 using namespace gl;
 using namespace glm;
 
+
+
 LinkedListRendering::LinkedListRendering(TableData* data) : RenderingStrategy(data)
 {
-
 }
 
+
+
 void LinkedListRendering::prepareDataBuffers() {
-
-
 
 	// fill buffers, our technique does not require a specific order or sorting
 	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {		
@@ -115,7 +117,11 @@ void LinkedListRendering::prepareImportanceBuffer() {
 	}
 
 	m_activeImportance = tempImportance;
+	prepareTrajectoryImportance(m_dataTable);
+
 }
+
+
 
 void LinkedListRendering::prepareImportanceBuffer(TableImportance* importance) {
 
@@ -131,9 +137,50 @@ void LinkedListRendering::prepareImportanceBuffer(TableImportance* importance) {
 			m_activeImportance.push_back(m_importanceTable->m_importance.at(i).at(j));
 		}
 	}
+	prepareTrajectoryImportance(m_importanceTable);
 }
 
+void LinkedListRendering::prepareSimilarityTables(Table* table)
+{
+	prepareTrajectoryDistance(table);
+}
 
+void LinkedListRendering::prepareTrajectoryImportance(Table* table)
+{
+	m_importanceLookup.clear();
+
+	for (int i = 0; i < table->m_numberOfTrajectories; i++) {
+		int count = static_cast<int>(table->m_numberOfTimesteps.at(i));
+		float sum = 0.0f;
+		for (int j = 0; j < table->m_numberOfTimesteps.at(i); j++) {
+			sum += m_activeImportance.at((i * count) + j);
+		}
+		m_importanceLookup.push_back(sum / static_cast<float>(count));
+	}
+}
+
+void LinkedListRendering::prepareTrajectoryDistance(Table* table)
+{
+
+}
+
+void LinkedListRendering::prepareEuclidean(Table* table)
+{
+	// For each line
+	for (int line = 0; line < table->m_numberOfTrajectories; line++) {
+		const int count = static_cast<int>(table->m_numberOfTimesteps.at(line));
+		for(int step = 0; step < table->m_numberOfTimesteps.at(line); step++){
+			int index = (line * count) + step;
+			float x = m_activeXColumn.at(index);
+			float y = m_activeYColumn.at(index);
+			float z = m_activeImportance.at(index);
+
+
+		}
+		
+	}
+
+}
 
 // check if a point is on the LEFT side of an edge
 bool inside(vec2 p, vec2 p1, vec2 p2)
@@ -490,6 +537,12 @@ void LinkedListRendering::performRendering(globjects::Program* p, globjects::Ver
 	for (int i = 0; i < m_dataTable->m_numberOfTrajectories; i++) {
 		p->setUniform("numberOfTimesteps", m_dataTable->m_numberOfTimesteps[i]);
 		p->setUniform("trajectoryID", i);
+
+
+		float const similarity = getSimilarity(i);
+		p->setUniform("similarity", similarity);
+		// Compute/Retrive the similarity value 0 -> 1, where 1 = Focus Line ID
+
 		// globjects::debug() << m_indices.at(i) << std::endl;
 		va->drawElements(GL_PATCHES,
 			m_indices.at(i).size(),
@@ -499,4 +552,25 @@ void LinkedListRendering::performRendering(globjects::Program* p, globjects::Ver
 
 		firstIndex += m_dataTable->m_numberOfTimesteps[i];
 	}
+}
+
+float LinkedListRendering::getSimilarity(int index)
+{
+	if (m_selectionMode == SelectionModes::SINGLE || m_selectionRange <= 0.0f) {
+		if (index == m_focusID) return 1.0f;
+	}
+	else if (m_selectionMode == SelectionModes::IMPORTANCE) {
+		float selectedImportance = m_importanceLookup.at(m_focusID);
+		float currentImportance = m_importanceLookup.at(index);
+		float diff = abs(selectedImportance - currentImportance);
+		if (diff <= m_selectionRange) {
+			return 1.0f - ((diff * 1.0f) / m_selectionRange);
+		}
+	} else if (m_selectionMode == SelectionModes::SIMILARITY){
+		return 1.0f;
+	} else if (m_selectionMode == SelectionModes::EUCLIDEAN){
+		
+	}
+
+	return 0.0f;
 }

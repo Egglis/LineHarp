@@ -53,6 +53,7 @@ uniform vec2 delayedLensPosition;
 
 uniform float brushingAngle;
 uniform float testSlider;
+uniform float similarity;
 
 float computeDistanceToLineSegment(vec2 v, vec2 w, vec2 p){
 
@@ -99,9 +100,10 @@ void main()
 #endif
 
 #ifdef FOCUS_LINE
-	if(focusLineID == trajectoryID){
-		currentLineColor = focusLineColor;
-	}
+
+	currentLineColor = mix(lineColor, focusLineColor, similarity);
+	
+	
 #endif
 
 #ifdef DEPTH_LUMINANCE_COLOR

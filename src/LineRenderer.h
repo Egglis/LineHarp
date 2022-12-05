@@ -3,9 +3,7 @@
 
 // currently supported rendering strategies
 #include "RenderingStrategies/RenderingStrategy.h"
-#include "RenderingStrategies/LinkedListRendering.h"
 #include "UiRenderer.h"
-
 
 #include <memory>
 #include <deque>
@@ -70,6 +68,8 @@ namespace lineweaver
 		std::unique_ptr<globjects::Texture> m_offsetTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_blurTexture[2] = { nullptr, nullptr };
 		std::unique_ptr<globjects::Texture> m_volumeTexture = nullptr;
+		std::unique_ptr<globjects::Texture> m_IdTexture = nullptr;
+
 
 
 		glm::ivec2 m_framebufferSize;

@@ -14,6 +14,8 @@ namespace lineweaver
 	public:
 		UiRenderer();
 		void renderUi(); // TODO remove
+
+		void setFocusId(int id);
 		
 		// Animation Settings
 		void animationSettings();
@@ -22,7 +24,8 @@ namespace lineweaver
 		bool dataFile();
 		bool impFile();
 		void scaling();
-		void linePropreties(Viewer* viewer);
+		void linePropreties();
+		void selectionSettings(Viewer* viewer);
 		void lensFeature(Viewer* viewer);
 		void overplottingMeasurment(Viewer* viewer);
 
@@ -48,6 +51,10 @@ namespace lineweaver
 		// allow highlighting a single trajectory
 		bool enableFocusLine = false;
 		int focusLineID = 0;
+
+		// Selection:
+		int selectionMode = 0; // 0-SingleSelection, 1-Importance, 2-Similarity, 3-Distance
+		float selectionRange = 0.1f;
 
 		// add support for line halos
 		bool enableLineHalos = true;

@@ -13,6 +13,7 @@ uniform int trajectoryID;
 
 uniform float delayedTValue;
 uniform int focusLineID;
+uniform float similarity;
 
 struct Disp {
 	vec2 dir;
@@ -27,7 +28,7 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 #ifdef LENS_DEPTH
 	
 	// Option: 1, Resets the lensDepth after animation is complete 
-	float ldepth = mix(lensDepthValue, 2.0 , foldTime*2.0);
+	float ldepth = mix(lensDepthValue, 1.3 , foldTime*1.3);
 	
 	
 	vec3 lPos = vec3(lensPos, ldepth);
@@ -80,9 +81,14 @@ vec4 lensDisplacment(vec4 pos, float vertexImportance) {
 	Disp orgDisp = disp(position, lensPosition);
 	Disp dlDisp = disp(delayedPosition, delayedLensPosition);
 
+	
+	#ifdef FOCUS_LINE
+		orgDisp.weight *= 1.0 - similarity;
+		dlDisp.weight *= 1.0 - similarity;
+	#endif
+
 	const float mixingFactor = 0.2;
 	position.xy += orgDisp.dir * mix(mix(orgDisp.weight , dlDisp.weight, mixingFactor) , 0.0, delayedTValue);
-
 
 	position.z = 0.0;
 	return position;
@@ -93,11 +99,7 @@ vec4 lensDisplacment(vec4 pos, float vertexImportance) {
 
 vec4 displace(vec4 pos, float vertexImportance){
 
-#ifdef FOCUS_LINE
-	if(focusLineID == trajectoryID){
-		return pos;
-	}
-#endif
+
 #ifdef LENS_FEATURE
 	return lensDisplacment(pos, vertexImportance);
 #endif

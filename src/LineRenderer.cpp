@@ -105,6 +105,14 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer()
 	m_offsetTexture->setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	m_offsetTexture->image2D(0, GL_R32UI, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
 
+	m_IdTexture = Texture::create(GL_TEXTURE_2D);
+	m_IdTexture->setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	m_IdTexture->setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	m_IdTexture->setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	m_IdTexture->setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	m_IdTexture->image2D(0, GL_R32I, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+
+
 	m_blurFramebuffer = Framebuffer::create();
 	m_blurFramebuffer->attachTexture(GL_COLOR_ATTACHMENT0, m_blurTexture[0].get());
 	m_blurFramebuffer->attachTexture(GL_COLOR_ATTACHMENT1, m_blurTexture[1].get());
@@ -115,7 +123,8 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer()
 	m_lineFramebuffer = Framebuffer::create();
 	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT0, m_lineChartTexture.get());
 	m_lineFramebuffer->attachTexture(GL_DEPTH_ATTACHMENT, m_depthTexture.get());
-	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT2, m_IdTexture.get());
+	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 });
 
 }
 
@@ -130,6 +139,7 @@ void LineRenderer::display()
 		m_lineChartTexture->image2D(0, GL_RGBA32F, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		m_depthTexture->image2D(0, GL_DEPTH_COMPONENT, m_framebufferSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
 		m_offsetTexture->image2D(0, GL_R32UI, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
+		m_IdTexture->image2D(0, GL_R32I, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
 
 		for (int i = 0; i < 2; i++)
 			m_blurTexture[i]->image2D(0, GL_RGBA, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -301,7 +311,6 @@ void LineRenderer::display()
 				vertexBinding->setBuffer(m_importanceColumnBuffer.get(), 0, sizeof(float));
 				vertexBinding->setFormat(1, GL_FLOAT);
 				m_vao->enable(2);
-				globjects::debug() << renderingStrategy->activeImportance() << std::endl;
 
 			}
 
@@ -315,7 +324,8 @@ void LineRenderer::display()
 	}
 
 	m_uiRenderer.scaling();
-	m_uiRenderer.linePropreties(viewer());
+	m_uiRenderer.linePropreties();
+	m_uiRenderer.selectionSettings(viewer());
 	m_uiRenderer.lensFeature(viewer());
 	m_uiRenderer.overplottingMeasurment(viewer());
 
@@ -392,8 +402,8 @@ void LineRenderer::display()
 	float dist = distance(target, m_delayedLensPosition);
 
 	// Compute the force which we push the delayed lens in
-	glm::vec2 force = (lensDir * (dist)) * 0.01f;
-	force *= m_uiRenderer.globalAnimationFactor;
+	glm::vec2 force = (lensDir * (dist));
+	force *= m_uiRenderer.globalAnimationFactor * deltaTime;
 
 	float t; 
 	if (length(force) < dist) {
@@ -417,29 +427,18 @@ void LineRenderer::display()
 
 	// Fold Animation, reset when timer runs out
 	if (viewer()->foldAnimation()) {
-		m_foldTimer += deltaTime;
+		m_foldTimer = min(1.0f, m_foldTimer + deltaTime);
 		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
-		if (m_foldTimer >= 1.0) {
-			m_foldTimer = 0.0;
-			viewer()->endFoldAnimation();
-		}
+	} else {
+		m_foldTimer = max(0.0f, m_foldTimer - deltaTime);
 	}
+
 
 	m_prevTime = currTime;
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Line rendering pass and linked list generation
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	/*
-	if (viewer()->m_mousePressed[0]) {
-		m_clickedLocation = m_lensPosition;
-		globjects::debug() << m_clickedLocation.x << ", " << m_clickedLocation.y << std::endl;
-		globjects::debug() << viewer()->m_mousePressed[0] << std::endl;
-	}
-	else {
-		m_initClickLocation = m_lensPosition;
-	}
-	*/
 
 	m_lineFramebuffer->bind();
 
@@ -531,11 +530,11 @@ void LineRenderer::display()
 	glPatchParameteri(GL_PATCH_VERTICES, 4);
 
 	programLine->use();
+	renderingStrategy->updateSettings(m_uiRenderer.focusLineID, m_uiRenderer.selectionMode, m_uiRenderer.selectionRange);
 	renderingStrategy->performRendering(programLine, m_vao.get());
 
 	programLine->release();
 	m_vao->unbind();
-
 
 
 
@@ -651,6 +650,30 @@ void LineRenderer::display()
 	programBlend->release();
 
 	m_vaoQuad->unbind();
+
+	// Read pixel at clicked location
+	if (viewer()->m_mousePressed[0]) {
+		glReadBuffer(GL_COLOR_ATTACHMENT2);
+		double mouseX, mouseY;
+		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+
+		glm::vec2 position = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
+		
+		// Translate Mouse Position into pixel position
+		int x = (position.x * viewportSize.x / 2) + viewportSize.x / 2;
+		int y = (position.y * viewportSize.y / 2) + viewportSize.y / 2;
+
+		// id = 0: Nothing, (id - 1) = Trajectory ID
+		int id = 0;
+		glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
+		if(id != 0 && id <= numberOfTrajectories){
+			m_uiRenderer.setFocusId(id - 1);
+		}
+
+		viewer()->m_mousePressed[0] = false;
+	}
+
+
 
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);

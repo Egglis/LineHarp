@@ -17,6 +17,11 @@ void UiRenderer::renderUi() {
 
 }
 
+void lineweaver::UiRenderer::setFocusId(int id)
+{
+	focusLineID = id;
+}
+
 bool UiRenderer::dataFile() {	
 	fileMode = 0;
 	ImGui::Combo("File Mode", &fileMode, "Trajectory\0Series\0");
@@ -71,7 +76,7 @@ void UiRenderer::scaling() {
 }
 
 
-void UiRenderer::linePropreties(Viewer* viewer) {
+void UiRenderer::linePropreties() {
 	if (ImGui::CollapsingHeader("Line Properties", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 
@@ -80,10 +85,21 @@ void UiRenderer::linePropreties(Viewer* viewer) {
 		ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
 
 		ImGui::Checkbox("Enable Line-Halos", &enableLineHalos);
+	}
+}
 
+void lineweaver::UiRenderer::selectionSettings(Viewer* viewer)
+{
+	if(ImGui::CollapsingHeader("Selection Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("Enable Focus-Line", &enableFocusLine);
 		ImGui::SliderInt("Focus-Line", &focusLineID, 0, viewer->scene()->tableData()->m_numberOfTrajectories - 1);
+
+		ImGui::Combo("Selection Mode", &selectionMode, "Single\0Importance\0Similarity\0Euclidean");
+		if(selectionMode != 0) {
+			ImGui::SliderFloat("Selection Range", &selectionRange, 0.0f, 1.0f);
+		}
 	}
+
 }
 
 void UiRenderer::lensFeature(Viewer* viewer) {
