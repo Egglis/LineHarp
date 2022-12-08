@@ -7,9 +7,11 @@ uniform float prevLensDisp;
 uniform float lensDepthValue;
 uniform vec2 delayedLensPosition;
 uniform float time;
+
+uniform int trajectoryID;
+
 uniform float testTime;
 uniform float foldTime;
-uniform int trajectoryID;
 
 uniform float delayedTValue;
 uniform int focusLineID;
@@ -76,6 +78,7 @@ vec4 lensDisplacment(vec4 pos, float vertexImportance) {
 
 	vec4 position = pos;
 	position.z = vertexImportance;
+
 
 	vec4 delayedPosition = position;
 	Disp orgDisp = disp(position, lensPosition);

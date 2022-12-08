@@ -80,6 +80,8 @@ namespace lineweaver
 		bool foldAnimation() { return m_foldAnimation; };
 		void endFoldAnimation() { m_foldAnimation = false; };
 
+		bool pullAnimation() { return m_pullAnimation; };
+
 	private:
 
 		void beginFrame();
@@ -146,7 +148,7 @@ namespace lineweaver
 
 
 		bool m_foldAnimation = false;
-
+		bool m_pullAnimation = false;
 	};
 
 

@@ -100,6 +100,7 @@ void lineweaver::UiRenderer::selectionSettings(Viewer* viewer)
 		if(selectionMode != 0) {
 			ImGui::SliderFloat("Selection Range", &selectionRange, 0.0f, 1.0f);
 		}
+		ImGui::Checkbox("Pull Background", &pullBackgorund);
 	}
 
 }
@@ -201,6 +202,9 @@ std::string UiRenderer::generateDefines() {
 	if (enableLensDepth)
 		defines += "#define LENS_DEPTH\n";
 
+	if (pullBackgorund)
+		defines += "#define PULL_BACKGROUND\n";
+
 	if (easeFunctionID == 0)
 		defines += "#define EASE_LINEAR\n";
 	else if (easeFunctionID == 1)
@@ -239,7 +243,6 @@ std::string UiRenderer::generateDefines() {
 		defines += "#define EASE_OUT_EXPO\n";
 	else if (easeFunctionID == 18)
 		defines += "#define EASE_IN_OUT_EXPO\n";
-
 	return defines;
 }
 

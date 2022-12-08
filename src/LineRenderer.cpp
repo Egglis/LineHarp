@@ -401,7 +401,7 @@ void LineRenderer::display()
 	glm::vec2 lensDir = normalize(target - m_delayedLensPosition);
 	float dist = distance(target, m_delayedLensPosition);
 
-	// Compute the force which we push the delayed lens in
+	// Computes the force which we push the delayed lens
 	glm::vec2 force = (lensDir * (dist));
 	force *= m_uiRenderer.globalAnimationFactor * deltaTime;
 
@@ -431,6 +431,13 @@ void LineRenderer::display()
 		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
 	} else {
 		m_foldTimer = max(0.0f, m_foldTimer - deltaTime);
+	}
+
+	if (viewer()->pullAnimation()) {
+		m_pullTimer = min(1.0f, m_pullTimer + deltaTime);
+	}
+	else {
+		m_pullTimer = max(0.0f, m_pullTimer - deltaTime);
 	}
 
 
@@ -524,6 +531,7 @@ void LineRenderer::display()
 	programLine->setUniform("time", m_time);
 	programLine->setUniform("testTime", m_testTimer);
 	programLine->setUniform("foldTime", m_foldTimer);
+	programLine->setUniform("pullTime", m_pullTimer);
 
 	
 	m_vao->bind();

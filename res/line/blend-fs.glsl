@@ -253,8 +253,8 @@ void main()
 	}
 
 
+	
 	/*
-
 		float pxlDistance2 = length((delayedLensPosition-ndCoordinates) * vec2(aspectRatio, 1.0));
 	
 	
@@ -267,11 +267,7 @@ void main()
 		{
 			lineChartTexture.rgb = mix(vec3(0,1,0), lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance2));
 		}
-
 	*/
-
-
-
 #endif
 
 }

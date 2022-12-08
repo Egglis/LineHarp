@@ -64,7 +64,13 @@ void SimTable::setupImportanceVector(Table* table)
 // Iteretes all lines and steps with eachother and computes all the similarity measures
 void SimTable::iterateLines(Table* table)
 {
+	m_midPointTable.clear();
+	m_minDistTable.clear();
+	m_hausdorffTable.clear();
+	m_frechetTable.clear();
+
 	auto start = high_resolution_clock::now();
+
 	for (int lineA = 0; lineA < table->m_numberOfTrajectories; lineA++) {
 		std::vector<float> tmpMidPoint;
 		std::vector<float> tmpMinDist;

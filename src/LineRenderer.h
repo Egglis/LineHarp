@@ -95,7 +95,7 @@ namespace lineweaver
 		float m_time = 0.0;
 		float m_testTimer = 0.0;
 		float m_foldTimer = 0.0;
-
+		float m_pullTimer = 0.0;
 
 		float m_delayTimer = 0.0;
 		std::deque<glm::vec3> m_dlpQueue;

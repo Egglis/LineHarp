@@ -310,11 +310,21 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 				viewer->m_renderers[index]->setEnabled(!enabled);
 			}
 		}
+
+		// Folding and Pulling Animations:
 		else if (key == GLFW_KEY_F) {
 			if(action == GLFW_PRESS){
 				viewer->m_foldAnimation = true;
 			} else if(action == GLFW_RELEASE){
 				viewer->m_foldAnimation = false;
+			}
+		}
+		else if (key == GLFW_KEY_P) {
+			if (action == GLFW_PRESS) {
+				viewer->m_pullAnimation = true;
+			}
+			else if (action == GLFW_RELEASE) {
+				viewer->m_pullAnimation = false;
 			}
 		}
 
@@ -339,7 +349,6 @@ void Viewer::mouseButtonCallback(GLFWwindow* window, int button, int action, int
 			if (io.WantCaptureMouse)
 				return;
 		}
-
 		if (button >= 0 && button < 3){
 			if(action == GLFW_PRESS){
 				viewer->m_mousePressed[button] = true;

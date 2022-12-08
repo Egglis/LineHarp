@@ -55,6 +55,7 @@ namespace lineweaver
 		// Selection:
 		int selectionMode = 0; // 0-SingleSelection, 1-Importance, 2-Similarity, 3-Distance
 		float selectionRange = 0.1f;
+		bool pullBackgorund = false;
 
 		// add support for line halos
 		bool enableLineHalos = true;

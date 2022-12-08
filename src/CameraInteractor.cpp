@@ -116,7 +116,9 @@ void CameraInteractor::mouseButtonEvent(int button, int action, int mods)
 {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
 	{
-		m_lensDepth = true;
+		if (mods == GLFW_MOD_SHIFT) {
+			m_lensDepth = true;
+		}
 		m_xPrevious = m_xCurrent;
 		m_yPrevious = m_yCurrent;
 	}

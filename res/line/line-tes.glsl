@@ -24,6 +24,7 @@ patch in int totalPoints;
 patch in float imp_p0;
 patch in float imp_p3;
 patch in float t_value;
+uniform float pullTime;
 
 
 // Magic lens
@@ -138,6 +139,13 @@ void main(){
 	float imp_p2 = tessOut[1].pointImportance;
 
 	float vertexImportance = mix(imp_p1, imp_p2, t1);
+#ifdef PULL_BACKGROUND
+	vertexImportance = mix(vertexImportance, similarity, pullTime);
+#else
+	float pullImportance = ((similarity * (1.0 - vertexImportance)) / 1.0) + vertexImportance;
+	vertexImportance = mix(vertexImportance, pullImportance, pullTime); 
+#endif
+	
 	vsOut.pointImportance = vertexImportance;
 
 
