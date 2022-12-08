@@ -94,7 +94,9 @@ void lineweaver::UiRenderer::selectionSettings(Viewer* viewer)
 		ImGui::Checkbox("Enable Focus-Line", &enableFocusLine);
 		ImGui::SliderInt("Focus-Line", &focusLineID, 0, viewer->scene()->tableData()->m_numberOfTrajectories - 1);
 
-		ImGui::Combo("Selection Mode", &selectionMode, "Single\0Importance\0Similarity\0Euclidean");
+		
+
+		ImGui::Combo("Selection Mode", &selectionMode, "Single\0Importance\0Mid Point\0Min Dist\0Hausdorff Dist\0Frechet Dist");
 		if(selectionMode != 0) {
 			ImGui::SliderFloat("Selection Range", &selectionRange, 0.0f, 1.0f);
 		}
