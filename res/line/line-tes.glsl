@@ -78,10 +78,11 @@ vec4 catmull(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float u ){
 
 }
 
+
 // Constructs the left and right vertex of current position based on prev and next
 void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
 	float fragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
-		
+
 	float aspectRatio = viewportSize.x/viewportSize.y;
 	fragmentLineWidth *= aspectRatio;	
 
@@ -121,12 +122,12 @@ void main(){
 	int vertexIndex = int(round(u * totalPoints)); 
 	float du = 1.0f/totalPoints;
 
-	/*
-	vec3 pcn = calulateInterpolationValues(p1, p2, u);
-	float t0 = pcn.x;
-	float t1 = pcn.y;
-	float t2 = pcn.z;
-	*/
+	
+	//vec3 pcn = calulateInterpolationValues(p1, p2, u);
+	//float t0 = pcn.x;
+	//float t1 = pcn.y;
+	//float t2 = pcn.z;
+	
 	
 	
 	float t0 = u-du;
@@ -138,14 +139,24 @@ void main(){
 	float imp_p1 = tessOut[0].pointImportance;
 	float imp_p2 = tessOut[1].pointImportance;
 
-	float vertexImportance = mix(imp_p1, imp_p2, t1);
+
+// "Pulls" every non similary trajectory back to 0 
+float pullImp_p1, pullImp_p2;
+
+
 #ifdef PULL_BACKGROUND
-	vertexImportance = mix(vertexImportance, similarity, pullTime);
+	pullImp_p1 = similarity;
+	pullImp_p2 = similarity;
 #else
-	float pullImportance = ((similarity * (1.0 - vertexImportance)) / 1.0) + vertexImportance;
-	vertexImportance = mix(vertexImportance, pullImportance, pullTime); 
+	pullImp_p1 = ((similarity * (1.1 - imp_p1)) / 1.1) + imp_p1;
+	pullImp_p2 = ((similarity * (1.1 - imp_p2)) / 1.1) + imp_p2;
 #endif
+
 	
+	imp_p1 = mix(imp_p1, pullImp_p1, easeInOutElastic(pullTime)); 
+	imp_p2 = mix(imp_p2, pullImp_p2, easeInOutElastic(pullTime));
+
+	float vertexImportance = mix(imp_p1, imp_p2, t1);
 	vsOut.pointImportance = vertexImportance;
 
 

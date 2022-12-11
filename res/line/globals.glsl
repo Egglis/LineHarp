@@ -10,6 +10,11 @@ float easeOutElastic(float t){
 	return pow(2, -10 * t) * sin((t * 10 - 0.75) * c) + 1;
 }
 
+float easeInElastic( float t ) {
+    float t2 = t * t;
+    return t2 * t2 * sin( t * PI * 4.5 );
+}
+
 float easeOutQuad(float t){
 	if(t < 0.5f){
 		return 2*t*t; 
@@ -24,6 +29,19 @@ float easeInOutCirc(float t){
 	return t < 0.5
 	  ? (1 - sqrt(1 - pow(2 * t, 2))) / 2
 	  : (sqrt(1 - pow(-2 * t + 2, 2)) + 1) / 2;
+}
+
+float easeInOutElastic( float t ) {
+    float t2;
+    if( t < 0.45 ) {
+        t2 = t * t;
+        return 8 * t2 * t2 * sin( t * PI * 9 );
+    } else if( t < 0.55 ) {
+        return 0.5 + 0.75 * sin( t * PI * 4 );
+    } else {
+        t2 = (t - 1) * (t - 1);
+        return 1 - 8 * t2 * t2 * sin( t * PI * 9 );
+    }
 }
 
 

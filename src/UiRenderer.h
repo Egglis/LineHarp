@@ -94,6 +94,8 @@ namespace lineweaver
 
 		// Animation
 		float globalAnimationFactor = 1.0f;
+		float foldAnimationSpeed = 1.0f;
+		float pullAnimationSpeed = 1.0f;
 
 		bool dispAction = false;
 

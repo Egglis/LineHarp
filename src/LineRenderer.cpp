@@ -425,19 +425,20 @@ void LineRenderer::display()
 		}
 	}
 
-	// Fold Animation, reset when timer runs out
+	// Fold Animation:
 	if (viewer()->foldAnimation()) {
-		m_foldTimer = min(1.0f, m_foldTimer + deltaTime);
+		m_foldTimer = min(1.0f, m_foldTimer + (deltaTime * m_uiRenderer.foldAnimationSpeed));
 		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
 	} else {
-		m_foldTimer = max(0.0f, m_foldTimer - deltaTime);
+		m_foldTimer = max(0.0f, m_foldTimer - (deltaTime * m_uiRenderer.foldAnimationSpeed));
 	}
 
+	// Pulling Animation:
 	if (viewer()->pullAnimation()) {
-		m_pullTimer = min(1.0f, m_pullTimer + deltaTime);
+		m_pullTimer = min(1.0f, m_pullTimer + (deltaTime * m_uiRenderer.pullAnimationSpeed));
 	}
 	else {
-		m_pullTimer = max(0.0f, m_pullTimer - deltaTime);
+		m_pullTimer = max(0.0f, m_pullTimer - (deltaTime * m_uiRenderer.pullAnimationSpeed));
 	}
 
 
@@ -741,5 +742,4 @@ void LineRenderer::display()
 	// Restore OpenGL state
 	currentState->apply();
 }
-
 

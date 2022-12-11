@@ -103,7 +103,6 @@ void main()
 
 	currentLineColor = mix(lineColor, focusLineColor, similarity);
 	
-	
 #endif
 
 #ifdef DEPTH_LUMINANCE_COLOR

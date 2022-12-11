@@ -163,7 +163,10 @@ void UiRenderer::overplottingMeasurment(Viewer* viewer) {
 
 void UiRenderer::animationSettings() {
 	if (ImGui::BeginMenu("Animations")) {
-		ImGui::SliderFloat("Global Animation Factor", &globalAnimationFactor, 0.0f, 5.0f);
+		ImGui::SliderFloat("Global Animation Speed", &globalAnimationFactor, 0.0f, 5.0f);
+		ImGui::SliderFloat("Fold Animation Speed", &foldAnimationSpeed, 0.0f, 5.0f);
+		ImGui::SliderFloat("Pull Animation Speed", &pullAnimationSpeed, 0.0f, 5.0f);
+
 		ImGui::Checkbox("Enable Moving Animation:", &movingAnimation);
 		ImGui::EndMenu();
 	}

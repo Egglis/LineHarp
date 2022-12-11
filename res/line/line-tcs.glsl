@@ -1,6 +1,6 @@
 #version 450
 #define NR_POINTS 16
-
+#include "/defines.glsl"
 layout (vertices = 2) out;
 
 in vsData {
@@ -28,8 +28,6 @@ patch out float imp_p3;
 
 void main(){
     
-
-
 	if(gl_InvocationID == 0) {
 
                 pp0 = modelViewProjectionMatrix * gl_in[0].gl_Position;
@@ -38,8 +36,15 @@ void main(){
                 vec4 p1 = modelViewProjectionMatrix * gl_in[1].gl_Position;
                 vec4 p2 = modelViewProjectionMatrix * gl_in[2].gl_Position;
 
+                int nr;
 
-                int nr = lazyTesselation(p1, p2);
+                #ifdef LENS_FEATURE
+                    nr = 64;
+                #else
+                    nr = 2;
+                #endif
+
+                totalPoints = nr;
 
 
                 imp_p0 = vsOut[0].pointImportance;
@@ -48,7 +53,6 @@ void main(){
                 gl_TessLevelOuter[0] = float(1);
                 gl_TessLevelOuter[1] = float(nr);
 
-                totalPoints = nr;
 
 
         }

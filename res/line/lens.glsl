@@ -17,6 +17,7 @@ uniform float delayedTValue;
 uniform int focusLineID;
 uniform float similarity;
 
+
 struct Disp {
 	vec2 dir;
 	float weight;
@@ -29,9 +30,10 @@ float distanceToLens(vec4 point, vec2 lensPos) {
 
 #ifdef LENS_DEPTH
 	
-	// Option: 1, Resets the lensDepth after animation is complete 
-	float ldepth = mix(lensDepthValue, 1.3 , foldTime*1.3);
-	
+	// Option: 1, Resets the lensDepth after animation is complete
+
+	float ldepth = mix(lensDepthValue, 1.3 , easeInOutElastic(foldTime*1.3));
+
 	
 	vec3 lPos = vec3(lensPos, ldepth);
 
@@ -62,6 +64,7 @@ Disp disp(vec4 pos, vec2 lensPos) {
 
 	float weight = 1.0 - smoothstep(0.0, lensRadius, dist);
 	weight *= (lensRadius*viewportSize.y) * lensDisp;
+	weight = mix(weight, 1.0 , easeInOutElastic(foldTime));
 
 	// Interpolate with a custome value 0-1 based on importance (pos.z) and the testTimer
 
@@ -120,7 +123,7 @@ int lazyTesselation(vec4 p1, vec4 p2) {
 		vec4 currPoint = mix(p1, p2, t);
 		Disp disp = disp(currPoint, lensPosition);
 		if(disp.weight > 0.0) {
-			return MAX_POINTS;
+			return 3;
 		}
 	}
 
@@ -129,6 +132,7 @@ int lazyTesselation(vec4 p1, vec4 p2) {
 	return 2;
 }
 
+
 // Finds entry, exit of line thorugh circle, similar to ray marchiung?
 vec2 lensIntersection(vec4 p1, vec4 p2){
 	float entry;
@@ -136,13 +140,14 @@ vec2 lensIntersection(vec4 p1, vec4 p2){
 	bool entrySet = false;
 	for(float t = 0.0; t < 1.0; t += 1.0/MAX_POINTS){
 		vec4 currentPoint = mix(p1, p2, t);
+
 		float dist = distanceToLens(currentPoint, lensPosition);
 		if(dist < lensRadius && !entrySet){
 			entry = t;
 			entrySet = true;
 		}
 		if(dist > lensRadius && entrySet){
-			exit = t;
+			exit = t - 1.0/MAX_POINTS;
 			return vec2(entry, exit);
 		}
 	}
@@ -154,34 +159,40 @@ vec2 lensIntersection(vec4 p1, vec4 p2){
 	
 }
 
-float rxEase2(float x, float k, float c)
-{
-    k = clamp(k, 0.0001, 10000.0); // clamp optional, if you know your k
-    x = 0.5 - x; // re-center at 0
-    float s = sign(x);
-    x = clamp(abs(x) * 2.0, 0.0, 1.0);
-    return c + 0.5 * s * x / (x * (k - 1.0) - k);
-}
-
 
 // Project linear t-values onto a stepping function defined by lens radius
 float projection(float t, float entry, float exit){
-	
 	float v = (smoothstep(0.0, 0.0, t) * entry) + t*(exit-entry) + step(1.0, t);
-
-
 	return clamp(v, 0.0, 1.0);
 
 }
 
 // Finds the correct T-Value when projected onto custom function
 float calcT(vec4 p1, vec4 p2, float t){
+
+	// Entry, Exit
 	vec2 entryExit = lensIntersection(p1, p2);
 	float value = projection(t, entryExit.x, entryExit.y);
 
 	return value;
 }
 
+
+float closestPoint(vec2 p0, vec2 p1, vec2 lPos){
+	if (p0.x == p1.x) return 1.0;
+	if (p0.y == p1.y) return 0.0;
+
+	float m1 = (p1.y-p0.y)/(p1.x-p0.x);
+	float m2 = -1.0/m1;
+	float x = ((m1 * p0.x) - (m2 * lPos.x) + lPos.y - p0.y) / (m1-m2);
+	float y = m2 * (x - lPos.x) + lPos.y;
+	float t = abs(distance(p0, vec2(x,y)) / distance(p0, p1));
+	if(disp(vec4(x,y,1,1), lPos).weight > 0.0){
+		return t;
+	}
+	return -1.0;
+
+}
 
 float compT(vec4 p1, vec4 p2, float t) {
 	
@@ -197,6 +208,20 @@ float compT(vec4 p1, vec4 p2, float t) {
 	}
 
 	return 0.5;
+}
+
+
+float getTValue(vec2 p1, vec2 p2, float t){
+	float mid_t = closestPoint(p1.xy, p2.xy, lensPosition);
+	if(mid_t < 0.0){
+		return t;
+	}
+
+	// T is to the left of the middel???
+	if(t < mid_t){
+		return t + abs(mid_t - t);
+	}
+	return t;
 }
 
 
@@ -217,6 +242,7 @@ vec3 calulateInterpolationValues(vec4 p1, vec4 p2, float t){
 	prev = calcT(p1, p2, t0);
 	curr = calcT(p1, p2, t1);
 	next = calcT(p1, p2, t2);
+
 
 	return vec3(prev, curr, next);
 }

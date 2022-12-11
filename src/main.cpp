@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 		<< "OpenGL Vendor:   " << glbinding::aux::ContextInfo::vendor() << std::endl
 		<< "OpenGL Renderer: " << glbinding::aux::ContextInfo::renderer() << std::endl;
 
+
 	//std::string fileName = "./dat/6b0x.pdb";
 	std::string fileName = "";
 
