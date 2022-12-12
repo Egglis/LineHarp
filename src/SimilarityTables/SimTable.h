@@ -19,6 +19,7 @@ namespace lineweaver {
 	public:
 		float get(int focus, int current, float range); // row, col, range
 		void setup(Table* table);
+		void setup(const Table* table);
 
 		void setActiveX(std::vector<float> x) { m_x = normalize(x); };
 		void setActiveY(std::vector<float> y) { m_y = normalize(y); };

@@ -46,6 +46,13 @@ void SimTable::setup(Table* table) {
 	setupImportanceVector(table);
 }
 
+void SimTable::setup(const Table* table) {
+	Table* copy = const_cast<Table*>(table);
+	iterateLines(copy);
+	setupImportanceVector(copy);
+}
+
+
 // Sets up a list of average importance for each trajectory
 void SimTable::setupImportanceVector(Table* table)
 {

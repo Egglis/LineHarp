@@ -23,7 +23,6 @@ void lineweaver::UiRenderer::setFocusId(int id)
 }
 
 bool UiRenderer::dataFile() {	
-	fileMode = 0;
 	ImGui::Combo("File Mode", &fileMode, "Trajectory\0Series\0");
 
 	std::string oldDataFilename = dataFilename;
@@ -114,8 +113,12 @@ void UiRenderer::lensFeature(Viewer* viewer) {
 		ImGui::Checkbox("Enable Angular-Brushing", &enableAngularBrush);
 		ImGui::Checkbox("Enable Lens Depth", &enableLensDepth);
 
-		ImGui::SliderFloat("Lens Depth", &viewer->m_lensDepthValue, 0.0f, 1.0f);
-		lensDepthValue = viewer->getLensDepthValue();
+		if (enableLensDepth) {
+			ImGui::SliderFloat("Lens Depth", &viewer->m_lensDepthValue, 0.0f, 1.0f);
+			ImGui::SliderFloat("Lend Depth Scaling", &lensDepthScaling, 0.0f, 1.0f);
+			lensDepthValue = viewer->getLensDepthValue();
+		}
+
 
 		ImGui::SliderFloat("Lens Displacment ", &lensDisp, 0.0f, 1.0f);
 
@@ -207,6 +210,9 @@ std::string UiRenderer::generateDefines() {
 
 	if (pullBackgorund)
 		defines += "#define PULL_BACKGROUND\n";
+
+	if (binaryLensDepth)
+		defines += "#define BINARY_LENS_DEPTH\n";
 
 	if (easeFunctionID == 0)
 		defines += "#define EASE_LINEAR\n";

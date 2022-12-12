@@ -246,6 +246,8 @@ void TableData::loadSeries(const std::string& filePath)
 		int clusterId = iter.first->second;
 		m_clusterIds.push_back(clusterId);
 	}
+
+
 }
 
 void TableData::loadAndrewsSeries(const std::string& filePath)

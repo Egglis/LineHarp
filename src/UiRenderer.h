@@ -90,7 +90,9 @@ namespace lineweaver
 
 		// Lens Depth Mode
 		float lensDepthValue = 1.0f;
+		float lensDepthScaling = 0.5f;
 		bool enableLensDepth = false;
+		bool binaryLensDepth = false;
 
 		// Animation
 		float globalAnimationFactor = 1.0f;

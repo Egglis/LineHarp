@@ -5,6 +5,7 @@ uniform float lensRadius;
 uniform float lensDisp;
 uniform float prevLensDisp;
 uniform float lensDepthValue;
+uniform float lensDepthScaling;
 uniform vec2 delayedLensPosition;
 uniform float time;
 
@@ -26,33 +27,29 @@ struct Disp {
 
 // Returns distance to given lens position
 float distanceToLens(vec4 point, vec2 lensPos) {
+
 	float aspectRatio = viewportSize.x/viewportSize.y;
-
+	/*
 #ifdef LENS_DEPTH
+
+		// Binary Lens Depth 
+		float ldepth = mix(lensDepthValue, 1.3 , easeInOutElastic(foldTime*1.3));
 	
-	// Option: 1, Resets the lensDepth after animation is complete
+		vec3 lPos = vec3(lensPos, ldepth);
 
-	float ldepth = mix(lensDepthValue, 1.3 , easeInOutElastic(foldTime*1.3));
-
-	
-	vec3 lPos = vec3(lensPos, ldepth);
-
-	point.x *= aspectRatio;
-	lPos.x *= aspectRatio;
-
-	float dist = point.z > ldepth ? distance(lPos.xy, point.xy) : distance(lPos, point.xyz);
-
+		point.x *= aspectRatio;
+		lPos.x *= aspectRatio;
+		return point.z > ldepth ? distance(lPos.xy, point.xy) : distance(lPos, point.xyz);
 #else
+*/
 	vec2 lPos = lensPos;
 
 	point.x *= aspectRatio;
 	lPos.x *= aspectRatio;
 
-	float dist = distance(lPos, point.xy);
+	return distance(lPos, point.xy);
+//#endif
 
-#endif
-
-	return dist;
 }
 
 
@@ -64,7 +61,21 @@ Disp disp(vec4 pos, vec2 lensPos) {
 
 	float weight = 1.0 - smoothstep(0.0, lensRadius, dist);
 	weight *= (lensRadius*viewportSize.y) * lensDisp;
+
+
+#ifdef LENS_DEPTH
+	float depth = lensDepthValue;
+	depth = mix(lensDepthValue, 1.0, easeInOutElastic(foldTime));
+	#ifdef BINARY_LENS_DEPTH
+		if (pos.z < depth){
+			weight *= 0.0;
+		}
+	#else
+		weight *= smoothstep(depth, depth+lensDepthScaling, pos.z);
+	#endif
+#else
 	weight = mix(weight, 1.0 , easeInOutElastic(foldTime));
+#endif
 
 	// Interpolate with a custome value 0-1 based on importance (pos.z) and the testTimer
 

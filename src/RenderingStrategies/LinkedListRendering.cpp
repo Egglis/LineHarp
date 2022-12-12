@@ -489,7 +489,11 @@ void LinkedListRendering::weaveSeries(const TableData& table)
 		for (int x = 0; x < valueCount; x++)
 			m_activeImportance.push_back(trajectoryImportance.at(x));
 	}
-
+	m_simTable.setActiveImportance(m_activeImportance);
+	m_simTable.setActiveX(m_activeXColumn);
+	m_simTable.setActiveY(m_activeYColumn);
+	const Table* t = &table;
+	m_simTable.setup(t);
 }
 
 

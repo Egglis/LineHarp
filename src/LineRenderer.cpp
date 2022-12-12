@@ -525,6 +525,7 @@ void LineRenderer::display()
 
 	programLine->setUniform("brushingAngle", m_uiRenderer.brushingAngle);
 	programLine->setUniform("lensDepthValue", m_uiRenderer.lensDepthValue);
+	programLine->setUniform("lensDepthScaling", m_uiRenderer.lensDepthScaling);
 	programLine->setUniform("lensDisp", m_uiRenderer.lensDisp);
 
 	// programLine->setUniform("prevLensDisp", m_uiRenderer.previousLensDisp);
