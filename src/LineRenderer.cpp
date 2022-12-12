@@ -403,7 +403,8 @@ void LineRenderer::display()
 
 	// Computes the force which we push the delayed lens
 	glm::vec2 force = (lensDir * (dist));
-	force *= m_uiRenderer.globalAnimationFactor * deltaTime;
+	force *= (m_uiRenderer.globalAnimationFactor * deltaTime);
+	force *= 2.0f; // Feels better
 
 	float t; 
 	if (length(force) < dist) {

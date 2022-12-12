@@ -350,7 +350,7 @@ void Viewer::mouseButtonCallback(GLFWwindow* window, int button, int action, int
 				return;
 		}
 		if (button >= 0 && button < 3){
-			if(action == GLFW_PRESS){
+			if(action == GLFW_PRESS && mods != GLFW_MOD_SHIFT){
 				viewer->m_mousePressed[button] = true;
 			} else if (action == GLFW_RELEASE){
 				viewer->m_mousePressed[button] = false;
