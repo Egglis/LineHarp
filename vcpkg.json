@@ -6,13 +6,15 @@
     "glm",
     "glfw3",
     "glbinding",
-    "globjects",    
+    "globjects",
     "tinyfiledialogs",
-    "stb", 
+    "stb",
+    "portaudio",
+    "gamma",
     {
-      "name":"imgui",
+      "name": "imgui",
       "default-features": false,
-      "features": ["glfw-binding","opengl3-binding"]
+      "features": [ "glfw-binding", "opengl3-binding" ]
     }
   ]
 }

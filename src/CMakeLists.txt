@@ -20,5 +20,18 @@ target_link_libraries(lineweaver PRIVATE imgui::imgui)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 target_link_libraries(lineweaver PRIVATE tinyfiledialogs::tinyfiledialogs)
 
+find_package(portaudio CONFIG REQUIRED)
+target_link_libraries(lineweaver PRIVATE portaudio)
+
+
 find_path(STB_INCLUDE_DIRS "stb_c_lexer.h")
 target_include_directories(lineweaver PRIVATE ${STB_INCLUDE_DIRS})
+
+
+find_path(GAMMA_INCLUDE_DIR Gamma/Gamma.h)
+target_include_directories(lineweaver PRIVATE ${GAMMA_INCLUDE_DIR})
+
+find_library(GAMMA_LIB gamma)
+target_link_libraries(lineweaver PRIVATE ${GAMMA_LIB})
+
+
