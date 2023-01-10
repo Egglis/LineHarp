@@ -3,51 +3,124 @@
 #include <string>
 #include <vector>
 #include <glm/vec2.hpp>
+#include <imgui.h>
+#include <tinyfiledialogs.h>
+#include <iostream>
+#include <iomanip>
+
 #include "Viewer.h"
+#include "Audio/NoteMap.h"
 
 #include "RenderingStrategies/RenderingStrategy.h"
 #include "RenderingStrategies/LinkedListRendering.h"
+
+namespace Settings {
+
+	struct Animation
+	{
+		float globalAnimationFactor = 1.0f;
+		float foldAnimationSpeed = 1.0f;
+		float pullAnimationSpeed = 1.0f;
+		bool movingAnimation = true;
+	};
+
+	struct Audio
+	{
+		int min_note = 0;
+		int max_note = 71;
+
+		float note_interval = 0.2f;
+		float volume = 0.2f;
+
+		bool mute = false;
+		bool enableNotesWhileClicking = true;
+		bool reset = false;
+
+		int playingMode = 0;
+		int metric = 0;
+	};
+
+	struct File {
+		int fileMode = 0;
+		std::string dataFilename;
+		std::string importanceFilename;
+	};
+
+	struct Scaling
+	{
+		float xAxisScaling = 1.0f;
+		float yAxisScaling = 1.0f;
+	};
+
+	struct Line {
+		int coloringMode = 0; // 0-None, 1-Importance, 2-Depth, 3-Random
+		float lineWidth = 16.0f;
+		float smoothness = (1.0f / 3.0f); // weight used for soft depth compositing
+		bool enableLineHalos = true;
+	};
+
+	struct Selection
+	{
+		// TODO
+		bool TODO = true;
+	};
+	struct Lens {
+		// TODO
+		bool TODO = true;
+	};
+	struct OverPlotting {
+		//TODO
+		bool TODO = true;
+	};
+
+}
+
+
 
 namespace lineweaver
 {
 	class UiRenderer {
 	public:
 		UiRenderer();
-		void renderUi(); // TODO remove
 
 		void setFocusId(int id);
-		
-		// Animation Settings
-		void animationSettings();
+		void setNoteMap(gam::NoteMap* noteMap) { m_noteMap = noteMap; };
 
-		// Collapsing headers for Line Graph:
-		bool dataFile();
-		bool impFile();
-		void scaling();
-		void linePropreties();
-		void selectionSettings(Viewer* viewer);
-		void lensFeature(Viewer* viewer);
-		void overplottingMeasurment(Viewer* viewer);
+		// Animation Settings
+		void animationSettingsGUI();
+		Settings::Animation* Animation() { return &m_animationSettings; };
+
+		// Audio Setttings
+		void audioSettingsGUI();
+		Settings::Audio* Audio() { return &m_audioSettings; };
+
+
+		// Collapsing headers for Line Graph: ------------
+		// File Settings
+		bool dataFileGUI();
+		bool impFileGUI();
+		Settings::File* File() { return &m_fileSettings; };
+		
+		// Scaling Settings
+		void scalingGUI();
+		Settings::Scaling* Scaling() { return &m_scalingSettings; };
+
+		// Line Settings
+		void linePropretiesGUI();
+		Settings::Line* Line() { return &m_lineSettings; };
+
+		void selectionGUI(Viewer* viewer);
+		void lensSettingsGUI(Viewer* viewer);
+		void overplottingMeasurmentGUI(Viewer* viewer);
+
+
 
 		// Generates the defines.glsl file
 		std::string generateDefines();
 
-
-		int fileMode = 0;
-
 		// GUI variables ----------------------------------------------------------------------------
 
-		// Supported redner modes
-		int coloringMode = 0;		// 0-None, 1-Importance, 2-Depth, 3-Random
-
-		// allow the user to arbitrarily scale both axes
-		float xAxisScaling = 1.0f;
-		float yAxisScaling = 1.0f;
-
-		// store combo ID of selected file
-		std::string dataFilename;
-		std::string importanceFilename;
-
+		
 		// allow highlighting a single trajectory
 		bool enableFocusLine = false;
 		int focusLineID = 0;
@@ -56,13 +129,6 @@ namespace lineweaver
 		int selectionMode = 0; // 0-SingleSelection, 1-Importance, 2-Similarity, 3-Distance
 		float selectionRange = 0.1f;
 		bool pullBackgorund = false;
-
-		// add support for line halos
-		bool enableLineHalos = true;
-
-		// Line Parameters
-		float lineWidth = 16.0f;
-		float smoothness = (1.0f / 3.0f);		// weight used for soft depth compositing
 
 		// provide modulation of importance
 		int easeFunctionID = 0;
@@ -75,8 +141,8 @@ namespace lineweaver
 		bool enableLens = false;
 		float lensRadius = 0.15f;
 
-		glm::vec2 lensPosition;
-		glm::vec2 delayedLensPosition;
+		glm::vec2 lensPosition = glm::vec2(0, 0);
+		glm::vec2 delayedLensPosition = glm::vec2(0, 0);
 
 		// support for angular brush
 		bool enableAngularBrush = false;
@@ -94,16 +160,16 @@ namespace lineweaver
 		bool enableLensDepth = false;
 		bool binaryLensDepth = false;
 
-		// Animation
-		float globalAnimationFactor = 1.0f;
-		float foldAnimationSpeed = 1.0f;
-		float pullAnimationSpeed = 1.0f;
-
 		bool dispAction = false;
 
-		bool movingAnimation = true;
+	private:
+		Settings::Animation m_animationSettings;
+		Settings::Audio m_audioSettings;
+		Settings::File m_fileSettings;
+		Settings::Scaling m_scalingSettings;
+		Settings::Line m_lineSettings;
 
-		
+		gam::NoteMap* m_noteMap;
 	};
 
 

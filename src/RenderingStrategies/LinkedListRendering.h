@@ -26,6 +26,8 @@ namespace lineweaver
 			m_selectionRange = range;
 		};
 
+		SimTable* getSimTable() { return &m_simTable; };
+
 	private:
 		void prepareIndicesBuffer();
 

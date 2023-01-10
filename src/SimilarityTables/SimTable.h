@@ -29,6 +29,8 @@ namespace lineweaver {
 		SelectionModes getMode() { return m_mode; };
 		void setMode(int mode) { m_mode = static_cast<SelectionModes>(mode); };
 		void setMode(SelectionModes mode) { m_mode = mode; };
+
+		std::vector<float> getImportanceTable() { return m_importanceTable; };
 	protected:
 		void setupImportanceVector(Table* table);
 		void iterateLines(Table* table);

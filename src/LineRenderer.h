@@ -4,6 +4,7 @@
 // currently supported rendering strategies
 #include "RenderingStrategies/RenderingStrategy.h"
 #include "UiRenderer.h"
+#include "Audio/AudioPlayer.h"
 
 #include <memory>
 #include <deque>
@@ -37,7 +38,7 @@ namespace lineweaver
 		LineRenderer(Viewer *viewer);
 		virtual void display();
 	private:
-
+		void removeNonUnique(std::vector<int>& vec);
 
 
 		LinkedListRendering* renderingStrategy = NULL;
@@ -61,6 +62,8 @@ namespace lineweaver
 		std::unique_ptr<globjects::Buffer> m_totalPixelBuffer = std::make_unique<globjects::Buffer>();
 		std::unique_ptr<globjects::Buffer> m_visiblePixelBuffer = std::make_unique<globjects::Buffer>();
 		
+		//SSBO for detecting which lines are within the radius
+		std::unique_ptr<globjects::Buffer> m_idBuffer = std::make_unique<globjects::Buffer>();
 
 		std::unique_ptr<globjects::Texture> m_lineChartTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_depthTexture = nullptr;
@@ -107,9 +110,14 @@ namespace lineweaver
 		float m_previousLensDisp = 0.0f;
 		const float ANIMATION_LENGTH = 0.5;
 
+		// Audio
+		gam::AudioPlayer m_AudioPlayer;
+		bool m_foldButtonHold = false;
+		float audioTimer = 0.0f;
 
-
-
+		int prevPixelX = 0;
+		int prevPixelY = 0;
+		int prevID = -1;
 		// ------------------------------------------------------------------------------------------
 	};
 

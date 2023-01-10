@@ -52,6 +52,11 @@ layout(std430, binding = 3) buffer visiblePixelBuffer
 	uint visiblePixelCounter[];
 };
 
+layout(std430, binding = 4) buffer idBuffer
+{
+	uint linesWithinLens[];
+};
+
 // compute weight dependent on depth value 'z' within 0.1f <= |z| <= 500
 // McGuire and Bavoil, 2013: http://jcgt.org/published/0002/02/09/
 float computeWeight(float z){
@@ -77,6 +82,7 @@ void main()
 	ivec2 fragCoord = ivec2(gl_FragCoord.xy);
 	vec4 blurValue = texelFetch(blurTexture,fragCoord,0);
 
+	int currentID = -1;
 	IdTexture = -1;
 
 #ifdef RS_LINKEDLIST
@@ -196,6 +202,7 @@ void main()
  
             blendedColor = porterDuffOverOperator(vecSum,blendedColor);
 			IdTexture = (intersections[iIndexI].id + 1);
+			currentID = int((intersections[iIndexI].id + 1));
 		}
 
     }
@@ -252,6 +259,9 @@ void main()
 		lineChartTexture.rgb = mix(lineChartTexture.rgb, lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance));
 	}
 
+	if(pxlDistance <= lensRadius){
+		atomicExchange(linesWithinLens[currentID], currentID + 1);
+	} 
 
 	
 	/*

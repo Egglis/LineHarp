@@ -1,8 +1,5 @@
 #include "UiRenderer.h"
 
-#include <imgui.h>
-#include <tinyfiledialogs.h>
-
 using namespace lineweaver;
 using namespace gl;
 using namespace glm;
@@ -12,38 +9,33 @@ UiRenderer::UiRenderer() {
 
 }
 
-void UiRenderer::renderUi() {
-
-
-}
-
-void lineweaver::UiRenderer::setFocusId(int id)
+void UiRenderer::setFocusId(int id)
 {
 	focusLineID = id;
 }
 
-bool UiRenderer::dataFile() {	
-	ImGui::Combo("File Mode", &fileMode, "Trajectory\0Series\0");
+bool UiRenderer::dataFileGUI() {	
+	ImGui::Combo("File Mode", &m_fileSettings.fileMode, "Trajectory\0Series\0");
 
-	std::string oldDataFilename = dataFilename;
+	std::string oldDataFilename = m_fileSettings.dataFilename;
 
 	if (ImGui::Button("Browse##1"))
 	{
 		const char* filterExtensions[] = { "*.csv" };
 		const char* openfileName = tinyfd_openFileDialog("Open Data File", "./", 1, filterExtensions, "CSV Files (*.csv)", 0);
 
-		if (openfileName) dataFilename = std::string(openfileName);
+		if (openfileName) m_fileSettings.dataFilename = std::string(openfileName);
 	}
 
 	ImGui::SameLine();
-	ImGui::InputTextWithHint("Data File", "Press button to load new file", (char*)dataFilename.c_str(), dataFilename.size(), ImGuiInputTextFlags_ReadOnly);
+	ImGui::InputTextWithHint("Data File", "Press button to load new file", (char*)m_fileSettings.dataFilename.c_str(), m_fileSettings.dataFilename.size(), ImGuiInputTextFlags_ReadOnly);
 
-	return dataFilename != oldDataFilename;
+	return m_fileSettings.dataFilename != oldDataFilename;
 }
 
 
-bool UiRenderer::impFile() {
-	std::string oldImportanceFilename = importanceFilename;
+bool UiRenderer::impFileGUI() {
+	std::string oldImportanceFilename = m_fileSettings.importanceFilename;
 
 	if (ImGui::Button("Browse##2"))
 	{
@@ -51,43 +43,44 @@ bool UiRenderer::impFile() {
 		const char* openfileName = tinyfd_openFileDialog("Open Data File", "./", 1, filterExtensions, "CSV Files (*.csv)", 0);
 
 		if (openfileName)
-			importanceFilename = std::string(openfileName);
+			m_fileSettings.importanceFilename = std::string(openfileName);
 	}
 
 	ImGui::SameLine();
-	ImGui::InputTextWithHint("Importance File", "Press button to load new file", (char*)importanceFilename.c_str(), importanceFilename.size(), ImGuiInputTextFlags_ReadOnly);
+	ImGui::InputTextWithHint("Importance File", "Press button to load new file",
+		(char*)m_fileSettings.importanceFilename.c_str(), m_fileSettings.importanceFilename.size(), ImGuiInputTextFlags_ReadOnly);
 
-	return oldImportanceFilename != importanceFilename;
+	return oldImportanceFilename != m_fileSettings.importanceFilename;
 }
 
-void UiRenderer::scaling() {
+void UiRenderer::scalingGUI() {
 
 	// allow the user to arbitrarily scale both axes
-	ImGui::SliderFloat("x-Axis Scale", &xAxisScaling, 0.1f, 10.0f);
-	ImGui::SliderFloat("y-Axis Scale", &yAxisScaling, 0.1f, 10.0f);
+	ImGui::SliderFloat("x-Axis Scale", &m_scalingSettings.xAxisScaling, 0.1f, 10.0f);
+	ImGui::SliderFloat("y-Axis Scale", &m_scalingSettings.yAxisScaling, 0.1f, 10.0f);
 
 	if (ImGui::Button("Reset"))
 	{
-		xAxisScaling = 1.0f;
-		yAxisScaling = 1.0f;
+		m_scalingSettings.xAxisScaling = 1.0f;
+		m_scalingSettings.yAxisScaling = 1.0f;
 	}
 
 }
 
 
-void UiRenderer::linePropreties() {
+void UiRenderer::linePropretiesGUI() {
 	if (ImGui::CollapsingHeader("Line Properties", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 
-		ImGui::Combo("Color Mode", &coloringMode, "None\0Importance\0Depth\0Random\0");
-		ImGui::SliderFloat("Line Width", &lineWidth, 1.0f, 128.0f);
-		ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
+		ImGui::Combo("Color Mode", &m_lineSettings.coloringMode, "None\0Importance\0Depth\0Random\0");
+		ImGui::SliderFloat("Line Width", &m_lineSettings.lineWidth, 1.0f, 128.0f);
+		ImGui::SliderFloat("Smoothness", &m_lineSettings.smoothness, 0.0f, 1.0f);
 
-		ImGui::Checkbox("Enable Line-Halos", &enableLineHalos);
+		ImGui::Checkbox("Enable Line-Halos", &m_lineSettings.enableLineHalos);
 	}
 }
 
-void lineweaver::UiRenderer::selectionSettings(Viewer* viewer)
+void lineweaver::UiRenderer::selectionGUI(Viewer* viewer)
 {
 	if(ImGui::CollapsingHeader("Selection Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("Enable Focus-Line", &enableFocusLine);
@@ -104,7 +97,7 @@ void lineweaver::UiRenderer::selectionSettings(Viewer* viewer)
 
 }
 
-void UiRenderer::lensFeature(Viewer* viewer) {
+void UiRenderer::lensSettingsGUI(Viewer* viewer) {
 	if (ImGui::CollapsingHeader("Lens Feature", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::SliderFloat("Lens Radius", &lensRadius, 0.0f, 1.0f);
@@ -141,7 +134,7 @@ void UiRenderer::lensFeature(Viewer* viewer) {
 	}
 }
 
-void UiRenderer::overplottingMeasurment(Viewer* viewer) {
+void UiRenderer::overplottingMeasurmentGUI(Viewer* viewer) {
 	if (ImGui::CollapsingHeader("Overplotting Measurement", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		if (ImGui::Button("Compute") || viewer->enforcedOverplottingComp())
@@ -164,32 +157,77 @@ void UiRenderer::overplottingMeasurment(Viewer* viewer) {
 }
 
 
-void UiRenderer::animationSettings() {
+void UiRenderer::animationSettingsGUI() {
 	if (ImGui::BeginMenu("Animations")) {
-		ImGui::SliderFloat("Global Animation Speed", &globalAnimationFactor, 0.0f, 5.0f);
-		ImGui::SliderFloat("Fold Animation Speed", &foldAnimationSpeed, 0.0f, 5.0f);
-		ImGui::SliderFloat("Pull Animation Speed", &pullAnimationSpeed, 0.0f, 5.0f);
+		ImGui::SliderFloat("Global Animation Speed", &m_animationSettings.globalAnimationFactor, 0.0f, 5.0f);
+		ImGui::SliderFloat("Fold Animation Speed", &m_animationSettings.foldAnimationSpeed, 0.0f, 5.0f);
+		ImGui::SliderFloat("Pull Animation Speed", &m_animationSettings.pullAnimationSpeed, 0.0f, 5.0f);
 
-		ImGui::Checkbox("Enable Moving Animation:", &movingAnimation);
+		ImGui::Checkbox("Enable Moving Animation:", &m_animationSettings.movingAnimation);
 		ImGui::EndMenu();
 	}
 
 }
 
+void UiRenderer::audioSettingsGUI() {
+	if (ImGui::BeginMenu("Audio")) {
+		ImGui::SliderFloat("Interval between each note:", &m_audioSettings.note_interval, 0.0, 1.0);
+		ImGui::SliderFloat("Note Volume", &m_audioSettings.volume, 0.0, 1.0);
+
+		// Set up the Note Range
+		const int min = 0;
+		const int max = m_noteMap->getNotes()->size() - 1;
+		const Note minNote = m_noteMap->getNoteFromIndex(m_audioSettings.min_note);
+		const Note maxNote = m_noteMap->getNoteFromIndex(m_audioSettings.max_note);
+
+		std::ostringstream minS;
+		std::ostringstream maxS;
+		minS << std::fixed << std::setprecision(2) << minNote.frequency;
+		maxS << std::fixed << std::setprecision(2) << maxNote.frequency;
+
+		const std::string minFormat = minNote.name + " - " + minS.str() + "hz";
+		const std::string maxFormat = maxNote.name + " - " + maxS.str() + "hz";
+
+		ImGui::DragIntRange2("Note Range", &m_audioSettings.min_note, &m_audioSettings.max_note,
+			1, min, max,
+			minFormat.c_str(), maxFormat.c_str());
+
+		m_noteMap->min_freq_index = m_audioSettings.min_note;
+		m_noteMap->max_freq_index = m_audioSettings.max_note;
+
+		m_audioSettings.reset = ImGui::Button("Reset Audio Player");
+		
+			
+		ImGui::Spacing();
+
+		ImGui::Checkbox("Play Notes When Clicking", &m_audioSettings.enableNotesWhileClicking);
+		ImGui::Combo("Audio Feedback mode while moving:", &m_audioSettings.playingMode, "Every Line\0Only Selected Lines\0Never Play");
+		ImGui::Combo("Audio Frequency Metric", &m_audioSettings.metric, "Importance\0Distance");
+		
+		m_audioSettings.mute = m_audioSettings.volume <= 0.0f;
+
+
+		ImGui::EndMenu();
+	}
+
+}
+
+
+
 std::string UiRenderer::generateDefines() {
 	std::string defines = "";
 
-	if (coloringMode == 1)
+	if (m_lineSettings.coloringMode == 1)
 		defines += "#define IMPORTANCE_AS_OPACITY\n";
-	else if (coloringMode == 2)
+	else if (m_lineSettings.coloringMode == 2)
 		defines += "#define DEPTH_LUMINANCE_COLOR\n";
-	else if (coloringMode == 3)
+	else if (m_lineSettings.coloringMode == 3)
 		defines += "#define RANDOM_LINE_COLORS\n";
 
 	if (enableFocusLine)
 		defines += "#define FOCUS_LINE\n";
 
-	if (enableLineHalos)
+	if (m_lineSettings.enableLineHalos)
 		defines += "#define LINE_HALOS\n";
 
 	// Depricated now, as RS_LINKEDLIST is always used

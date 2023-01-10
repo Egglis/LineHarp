@@ -3,6 +3,7 @@
 #include <globjects/State.h>
 #include <iostream>
 #include <filesystem>
+#include <algorithm>
 
 #include <imgui.h>
 #include "Viewer.h"
@@ -23,12 +24,13 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
+
 using namespace lineweaver;
 using namespace gl;
 using namespace glm;
 using namespace globjects;
 
-LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer()
+LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer(), m_AudioPlayer(&m_uiRenderer)
 {
 	Shader::hintIncludeImplementation(Shader::IncludeImplementation::Fallback);
 
@@ -125,11 +127,14 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer()
 	m_lineFramebuffer->attachTexture(GL_DEPTH_ATTACHMENT, m_depthTexture.get());
 	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT2, m_IdTexture.get());
 	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 });
+	
 
 }
 
 void LineRenderer::display()
 {
+
+
 	auto currentState = State::currentState();
 
 	if (viewer()->viewportSize() != m_framebufferSize)
@@ -187,26 +192,27 @@ void LineRenderer::display()
 	static bool dataChanged = false;
 	static bool importanceChanged = false;
 
-	m_uiRenderer.animationSettings();
+	m_uiRenderer.animationSettingsGUI();
+	m_uiRenderer.audioSettingsGUI();
 
 
 	ImGui::Begin("Importance Driven Dense Line Graphs");
 
 	if (ImGui::CollapsingHeader("CSV-Files", ImGuiTreeNodeFlags_DefaultOpen)) {
-		bool fileChanged = m_uiRenderer.dataFile();
+		bool fileChanged = m_uiRenderer.dataFileGUI();
 
 		if (fileChanged || viewer()->enforcedDataRefresh()) {
 
 			// initialize data table
-			if (m_uiRenderer.fileMode == 0) {
-				viewer()->scene()->tableData()->load(m_uiRenderer.dataFilename);
+			if (m_uiRenderer.File()->fileMode == 0) {
+				viewer()->scene()->tableData()->load(m_uiRenderer.File()->dataFilename);
 			}
 			else {
-				if (m_uiRenderer.dataFilename.find("AndrewsPlot") != std::string::npos) {
+				if (m_uiRenderer.File()->dataFilename.find("AndrewsPlot") != std::string::npos) {
 
 					// if data set is an andrews plot (currently indicated by name) 
 					// first, load data without duplicating first and last entry
-					viewer()->scene()->tableData()->loadAndrewsSeries(m_uiRenderer.dataFilename);
+					viewer()->scene()->tableData()->loadAndrewsSeries(m_uiRenderer.File()->dataFilename);
 
 					// second, perform andrews transformation
 					viewer()->scene()->tableData()->andrewsTransform(96);
@@ -215,7 +221,7 @@ void LineRenderer::display()
 				else {
 
 					// otherwise, load series duplicating first and last element as usual
-					viewer()->scene()->tableData()->loadSeries(m_uiRenderer.dataFilename);
+					viewer()->scene()->tableData()->loadSeries(m_uiRenderer.File()->dataFilename);
 				}
 
 			}
@@ -226,7 +232,7 @@ void LineRenderer::display()
 			// load data and apply implicite importance metric
 			renderingStrategy->prepareDataBuffers();
 
-			if (m_uiRenderer.fileMode == 0)
+			if (m_uiRenderer.File()->fileMode == 0)
 				renderingStrategy->prepareImportanceBuffer();
 			else
 				renderingStrategy->weaveSeries(*viewer()->scene()->tableData());
@@ -243,12 +249,12 @@ void LineRenderer::display()
 				m_uiRenderer.displayOverplottingGUI = false;
 			}
 		}
-		fileChanged = m_uiRenderer.impFile();
+		fileChanged = m_uiRenderer.impFileGUI();
 
 		if ((fileChanged || viewer()->enforcedImportanceRefresh()) && renderingStrategy != NULL)
 		{
 			// initialize importance table
-			viewer()->scene()->tableImportance()->load(m_uiRenderer.importanceFilename);
+			viewer()->scene()->tableImportance()->load(m_uiRenderer.File()->importanceFilename);
 
 			// load external importance data
 			renderingStrategy->prepareImportanceBuffer(viewer()->scene()->tableImportance());
@@ -323,11 +329,11 @@ void LineRenderer::display()
 		ImGui::Combo("Ease Function", &m_uiRenderer.easeFunctionID, "Linear\0In Sine\0Out Sine\0In Out Sine\0In Quad\0Out Quad\0In Out Quad\0In Cubic\0Out Cubic\0In Out Cubic\0In Quart\0Out Quart\0In Out Quart\0In Quint\0Out Quint\0In Out Quitn\0In Expo\0Out Expo\0In Out Expo\0");
 	}
 
-	m_uiRenderer.scaling();
-	m_uiRenderer.linePropreties();
-	m_uiRenderer.selectionSettings(viewer());
-	m_uiRenderer.lensFeature(viewer());
-	m_uiRenderer.overplottingMeasurment(viewer());
+	m_uiRenderer.scalingGUI();
+	m_uiRenderer.linePropretiesGUI();
+	m_uiRenderer.selectionGUI(viewer());
+	m_uiRenderer.lensSettingsGUI(viewer());
+	m_uiRenderer.overplottingMeasurmentGUI(viewer());
 
 	ImGui::End();
 	if (!m_dispAction) {
@@ -348,7 +354,7 @@ void LineRenderer::display()
 		glm::vec2 tempLensPosition = m_lensPosition;
 		m_lensPosition = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
 
-		if (initLensPosition || !m_uiRenderer.movingAnimation) {
+		if (initLensPosition || !m_uiRenderer.Animation()->movingAnimation) {
 			m_delayedLensPosition = m_lensPosition;
 
 			initLensPosition = false;
@@ -359,6 +365,7 @@ void LineRenderer::display()
 
 	int numberOfTrajectories = viewer()->scene()->tableData()->m_numberOfTrajectories;
 	std::vector<int> numberOfTimesteps = viewer()->scene()->tableData()->m_numberOfTimesteps;
+
 
 	// do not render if either the dataset was not loaded or the window is minimized 
 	if (renderingStrategy == NULL || viewer()->viewportSize().x == 0 || viewer()->viewportSize().y == 0) {
@@ -380,9 +387,8 @@ void LineRenderer::display()
 	float currTime = glfwGetTime();
 	float deltaTime = currTime - m_prevTime;
 
-	deltaTime *= m_uiRenderer.globalAnimationFactor;
-
-
+	deltaTime *= m_uiRenderer.Animation()->globalAnimationFactor;
+	audioTimer += deltaTime;
 
 
 	// Displacement timer
@@ -394,8 +400,6 @@ void LineRenderer::display()
 		}
 	}
 
-
-
 	// Compute the direction vector from delayedLensPosition and lensPosition
 	glm::vec2 target = m_lensPosition;
 	glm::vec2 lensDir = normalize(target - m_delayedLensPosition);
@@ -403,7 +407,7 @@ void LineRenderer::display()
 
 	// Computes the force which we push the delayed lens
 	glm::vec2 force = (lensDir * (dist));
-	force *= (m_uiRenderer.globalAnimationFactor * deltaTime);
+	force *= (m_uiRenderer.Animation()->globalAnimationFactor * deltaTime);
 	force *= 2.0f; // Feels better
 
 	float t; 
@@ -428,18 +432,18 @@ void LineRenderer::display()
 
 	// Fold Animation:
 	if (viewer()->foldAnimation()) {
-		m_foldTimer = min(1.0f, m_foldTimer + (deltaTime * m_uiRenderer.foldAnimationSpeed));
+		m_foldTimer = min(1.0f, m_foldTimer + (deltaTime * m_uiRenderer.Animation()->foldAnimationSpeed));
 		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
 	} else {
-		m_foldTimer = max(0.0f, m_foldTimer - (deltaTime * m_uiRenderer.foldAnimationSpeed));
+		m_foldTimer = max(0.0f, m_foldTimer - (deltaTime * m_uiRenderer.Animation()->foldAnimationSpeed));
 	}
 
 	// Pulling Animation:
 	if (viewer()->pullAnimation()) {
-		m_pullTimer = min(1.0f, m_pullTimer + (deltaTime * m_uiRenderer.pullAnimationSpeed));
+		m_pullTimer = min(1.0f, m_pullTimer + (deltaTime * m_uiRenderer.Animation()->pullAnimationSpeed));
 	}
 	else {
-		m_pullTimer = max(0.0f, m_pullTimer - (deltaTime * m_uiRenderer.pullAnimationSpeed));
+		m_pullTimer = max(0.0f, m_pullTimer - (deltaTime * m_uiRenderer.Animation()->pullAnimationSpeed));
 	}
 
 
@@ -481,6 +485,8 @@ void LineRenderer::display()
 
 	const uint offsetClearValue = 0;
 	m_offsetTexture->clearImage(0, GL_RED_INTEGER, GL_UNSIGNED_INT, &offsetClearValue);
+
+
 	// -------------------------------------------------------------------------------------------------
 
 
@@ -490,14 +496,14 @@ void LineRenderer::display()
 
 	mat4 modelTransform = viewer()->modelTransform();
 	mat4 inverseModelTransform = inverse(modelTransform);
-	float scaledLineWidth = length(vec2(inverseModelViewProjectionMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f) - inverseModelViewProjectionMatrix * (vec4(m_uiRenderer.lineWidth, 0.0f, 0.0f, 1.0f))) / vec2(viewportSize));
+	float scaledLineWidth = length(vec2(inverseModelViewProjectionMatrix * vec4(0.0f, 0.0f, 0.0f, 1.0f) - inverseModelViewProjectionMatrix * (vec4(m_uiRenderer.Line()->lineWidth, 0.0f, 0.0f, 1.0f))) / vec2(viewportSize));
 
 	programLine->setUniform("modelViewProjectionMatrix", modelViewProjectionMatrix);
 	programLine->setUniform("inverseModelViewProjectionMatrix", inverseModelViewProjectionMatrix);
 
 
-	programLine->setUniform("xAxisScaling", m_uiRenderer.xAxisScaling);
-	programLine->setUniform("yAxisScaling", m_uiRenderer.yAxisScaling);
+	programLine->setUniform("xAxisScaling", m_uiRenderer.Scaling()->xAxisScaling);
+	programLine->setUniform("yAxisScaling", m_uiRenderer.Scaling()->yAxisScaling);
 
 	programLine->setUniform("lineWidth", scaledLineWidth);
 	programLine->setUniform("lineColor", viewer()->lineChartColor());
@@ -636,6 +642,14 @@ void LineRenderer::display()
 		m_totalPixelBuffer->clearSubData(GL_R32UI, 0, sizeof(uint) * numberOfTrajectories, GL_RED_INTEGER, GL_UNSIGNED_INT, &bufferCounterClearValue);
 		m_visiblePixelBuffer->clearSubData(GL_R32UI, 0, sizeof(uint) * numberOfTrajectories, GL_RED_INTEGER, GL_UNSIGNED_INT, &bufferCounterClearValue);
 	}
+
+	// Clear id buffer
+	m_idBuffer = std::make_unique <globjects::Buffer>();
+	m_idBuffer->setStorage(sizeof(uint) * numberOfTrajectories, nullptr, gl::GL_NONE_BIT);
+	m_idBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
+	const uint bufferIdClearValue = 0;
+	m_idBuffer->clearSubData(GL_R32UI, 0, sizeof(uint) * numberOfTrajectories, GL_RED_INTEGER, GL_UNSIGNED_INT, &bufferIdClearValue);
+
 	// -------------------------------------------------------------------------------------------------
 
 	m_offsetTexture->bindActive(0);
@@ -645,7 +659,7 @@ void LineRenderer::display()
 	programBlend->setUniform("blurTexture", 1);
 
 	programBlend->setUniform("backgroundColor", viewer()->backgroundColor());
-	programBlend->setUniform("smoothness", m_uiRenderer.smoothness);
+	programBlend->setUniform("smoothness", m_uiRenderer.Line()->smoothness);
 
 	programBlend->setUniform("viewportSize", vec2(viewportSize));
 	programBlend->setUniform("lensPosition", m_lensPosition);
@@ -662,29 +676,122 @@ void LineRenderer::display()
 
 	m_vaoQuad->unbind();
 
-	// Read pixel at clicked location
-	if (viewer()->m_mousePressed[0]) {
-		glReadBuffer(GL_COLOR_ATTACHMENT2);
-		double mouseX, mouseY;
-		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+	/* AUDIO -------------------------------------------------- */
 
-		glm::vec2 position = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
-		
-		// Translate Mouse Position into pixel position
-		int x = (position.x * viewportSize.x / 2) + viewportSize.x / 2;
-		int y = (position.y * viewportSize.y / 2) + viewportSize.y / 2;
-
-		// id = 0: Nothing, (id - 1) = Trajectory ID
-		int id = 0;
-		glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
-		if(id != 0 && id <= numberOfTrajectories){
-			m_uiRenderer.setFocusId(id - 1);
-		}
-
-		viewer()->m_mousePressed[0] = false;
+	// Resets the audio player inCase of audio issues
+	if (m_uiRenderer.Audio()->reset) {
+		m_AudioPlayer.audioIO().close();
+		m_uiRenderer.Audio()->reset = false;
 	}
 
 
+	glReadBuffer(GL_COLOR_ATTACHMENT2);
+	double mouseX, mouseY;
+	glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+
+	glm::vec2 position = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
+
+	// Translate Mouse Position into pixel position
+	int x = (position.x * viewportSize.x / 2) + viewportSize.x / 2;
+	int y = (position.y * viewportSize.y / 2) + viewportSize.y / 2;
+
+	int id = 0;
+	glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
+
+	const gam::AudioMetric metric = static_cast<gam::AudioMetric>(m_uiRenderer.Audio()->metric);
+	const gam::AudioFeedbackModes mode = static_cast<gam::AudioFeedbackModes>(m_uiRenderer.Audio()->playingMode);
+
+	if (id != 0 && id <= numberOfTrajectories) {
+		if (viewer()->m_mousePressed[0] && prevID != id-1) {
+			m_uiRenderer.setFocusId(id - 1);
+			if (m_uiRenderer.Audio()->enableNotesWhileClicking) {
+				SimTable* simTable = renderingStrategy->getSimTable();
+
+				float value = 0.0f;
+				if (metric == gam::AudioMetric::IMPORTANCE) {
+					value = simTable->getImportanceTable().at(id - 1);
+				}
+				else if (metric == gam::AudioMetric::DISTANCE) {
+					value = simTable->get(m_uiRenderer.focusLineID, id - 1, 1.0f);
+				}
+				// m_AudioPlayer.audioIO().close(); // TODO maybe include
+				m_AudioPlayer.setStringFreqOnMetric(value, metric);
+				m_AudioPlayer.pluck.reset();
+				m_AudioPlayer.start();
+				prevID = id-1;
+			}
+		}
+
+		// Play the current hovered pixel if mouse have been moved
+		const bool moved = (x != prevPixelX || y != prevPixelY);
+		if (moved && audioTimer >= m_uiRenderer.Audio()->note_interval && !m_uiRenderer.Audio()->mute && mode != gam::AudioFeedbackModes::NEVER_PLAY) {
+			SimTable* simTable = renderingStrategy->getSimTable();
+
+			float value = 0.0f;
+			if (metric == gam::AudioMetric::IMPORTANCE) {
+				value = simTable->getImportanceTable().at(id - 1);
+			}
+			else if (metric == gam::AudioMetric::DISTANCE) {
+				if (mode == gam::AudioFeedbackModes::ONLY_SELECTION) {
+					value = simTable->get(m_uiRenderer.focusLineID, id - 1, m_uiRenderer.selectionRange);
+				}
+				else {
+					value = simTable->get(m_uiRenderer.focusLineID, id - 1, 1.0f);
+				}
+
+			}
+			
+			if (mode == gam::AudioFeedbackModes::ONLY_SELECTION && value > 0.0) {
+				m_AudioPlayer.setStringFreqOnMetric(value, metric);
+				m_AudioPlayer.pluck.reset();
+				m_AudioPlayer.start();
+				prevID = id;
+				audioTimer = 0.0f;
+			}
+
+			if (mode == gam::AudioFeedbackModes::ALWAYS_PLAY) {
+				m_AudioPlayer.setStringFreqOnMetric(value, metric);
+				m_AudioPlayer.pluck.reset();
+				m_AudioPlayer.start();
+				prevID = id;
+				audioTimer = 0.0f;
+			}
+
+
+		}
+
+
+	}
+
+	prevPixelX = x;
+	prevPixelY = y;
+
+	/*
+	if (viewer()->foldAnimation()) {
+		SimTable* simTable = renderingStrategy->getSimTable();
+		m_AudioPlayer.clearQueue();
+
+		// Read Contents of the SSBO
+		for (int i = 0; i < numberOfTrajectories; i++) {
+			uint curr = 0;
+			m_idBuffer->getSubData(i * sizeof(uint), sizeof(uint), &curr);
+			
+			if (curr > 0) {
+				const float currImp = simTable->getImportanceTable().at(curr-1);
+				m_AudioPlayer.addNote(currImp);
+			};
+
+		}
+		//m_AudioPlayer.prepareStart();
+		m_AudioPlayer.start();
+	}
+	else {
+		//m_AudioPlayer.audioIO().stop();
+
+	}
+	*/
+
+	m_idBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
@@ -745,3 +852,24 @@ void LineRenderer::display()
 	currentState->apply();
 }
 
+void LineRenderer::removeNonUnique(std::vector<int>& vec)
+{
+	// Sort the vector
+	std::sort(vec.begin(), vec.end());
+
+	// Find the first non-unique element
+	auto it = std::adjacent_find(vec.begin(), vec.end());
+
+	// If there are no non-unique elements, we're done
+	if (it == vec.end()) return;
+
+	// Iterate over the rest of the vector, looking for non-unique elements
+	while (it != vec.end())
+	{
+		// Remove the current non-unique element
+		it = vec.erase(it);
+
+		// Find the next non-unique element
+		it = std::adjacent_find(it, vec.end());
+	}
+}
