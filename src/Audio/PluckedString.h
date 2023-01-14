@@ -32,7 +32,6 @@ namespace gam {
 		Decay<> env;
 		MovingAvg<> fil;
 		Delay<float, ipl::Trunc> delay;
-
 	};
 
 

@@ -9,7 +9,6 @@
 #include <iomanip>
 
 #include "Viewer.h"
-#include "Audio/NoteMap.h"
 
 #include "RenderingStrategies/RenderingStrategy.h"
 #include "RenderingStrategies/LinkedListRendering.h"
@@ -84,7 +83,7 @@ namespace lineweaver
 		UiRenderer();
 
 		void setFocusId(int id);
-		void setNoteMap(gam::NoteMap* noteMap) { m_noteMap = noteMap; };
+		//void setNoteMap(gam::NoteMap* noteMap) { m_noteMap = noteMap; };
 
 		// Animation Settings
 		void animationSettingsGUI();
@@ -169,7 +168,7 @@ namespace lineweaver
 		Settings::Scaling m_scalingSettings;
 		Settings::Line m_lineSettings;
 
-		gam::NoteMap* m_noteMap;
+		//gam::NoteMap* m_noteMap;
 	};
 
 

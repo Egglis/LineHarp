@@ -2,9 +2,9 @@
 
 
 #include "AudioApp.h"
-#include "PluckedString.h"
 #include "../UiRenderer.h"
-
+#include "Note.h"
+#include <deque>
 
 namespace gam {
 
@@ -13,23 +13,22 @@ namespace gam {
 	public:
 		AudioPlayer(lineweaver::UiRenderer* ui){
 			m_ui = ui;
-			m_ui->setNoteMap(&m_noteMap);
+			//m_ui->setNoteMap(&m_noteMap);
 		};
 
 		// Decides how often a note is played
 		Accum<> tmr{ 1.0 / 0.2 }; 
-		PluckedString pluck{ scl::freq("a6") };
+		Note note1 = Note(440, 1.0);
+		Note note2 = Note(440, 1.0);
 
-		// Sets the current freq of the plucked string
-		void setStringFrequency(float hz);
+		std::deque<Note> notes;
 
-		// Sets the freqencuy based on which metric is passed
-		void setStringFreqOnMetric(float value , gam::AudioMetric metric);
+
+		void playNote(float value);
 
 		void onAudio(AudioIOData& io);
-		NoteMap* noteMap() { return &m_noteMap; };
+
 	private:
-		NoteMap m_noteMap;
 		lineweaver::UiRenderer* m_ui;
 	};
 

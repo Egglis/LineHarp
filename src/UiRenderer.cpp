@@ -173,7 +173,7 @@ void UiRenderer::audioSettingsGUI() {
 	if (ImGui::BeginMenu("Audio")) {
 		ImGui::SliderFloat("Interval between each note:", &m_audioSettings.note_interval, 0.0, 1.0);
 		ImGui::SliderFloat("Note Volume", &m_audioSettings.volume, 0.0, 1.0);
-
+		/*
 		// Set up the Note Range
 		const int min = 0;
 		const int max = m_noteMap->getNotes()->size() - 1;
@@ -194,7 +194,7 @@ void UiRenderer::audioSettingsGUI() {
 
 		m_noteMap->min_freq_index = m_audioSettings.min_note;
 		m_noteMap->max_freq_index = m_audioSettings.max_note;
-
+		*/
 		m_audioSettings.reset = ImGui::Button("Reset Audio Player");
 		
 			

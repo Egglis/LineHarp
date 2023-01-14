@@ -32,6 +32,8 @@ using namespace globjects;
 
 LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer(), m_AudioPlayer(&m_uiRenderer)
 {
+	m_AudioPlayer.start();
+
 	Shader::hintIncludeImplementation(Shader::IncludeImplementation::Fallback);
 
 	m_intersectionBuffer->setStorage(sizeof(vec3) * 2560 * 1440 * 128 + sizeof(uint), nullptr, gl::GL_NONE_BIT);
@@ -698,98 +700,32 @@ void LineRenderer::display()
 	int id = 0;
 	glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
 
-	const gam::AudioMetric metric = static_cast<gam::AudioMetric>(m_uiRenderer.Audio()->metric);
-	const gam::AudioFeedbackModes mode = static_cast<gam::AudioFeedbackModes>(m_uiRenderer.Audio()->playingMode);
+	//const gam::AudioMetric metric = static_cast<gam::AudioMetric>(m_uiRenderer.Audio()->metric);
+	//const gam::AudioFeedbackModes mode = static_cast<gam::AudioFeedbackModes>(m_uiRenderer.Audio()->playingMode);
 
 	if (id != 0 && id <= numberOfTrajectories) {
 		if (viewer()->m_mousePressed[0] && prevID != id-1) {
 			m_uiRenderer.setFocusId(id - 1);
-			if (m_uiRenderer.Audio()->enableNotesWhileClicking) {
-				SimTable* simTable = renderingStrategy->getSimTable();
-
-				float value = 0.0f;
-				if (metric == gam::AudioMetric::IMPORTANCE) {
-					value = simTable->getImportanceTable().at(id - 1);
-				}
-				else if (metric == gam::AudioMetric::DISTANCE) {
-					value = simTable->get(m_uiRenderer.focusLineID, id - 1, 1.0f);
-				}
-				// m_AudioPlayer.audioIO().close(); // TODO maybe include
-				m_AudioPlayer.setStringFreqOnMetric(value, metric);
-				m_AudioPlayer.pluck.reset();
-				m_AudioPlayer.start();
-				prevID = id-1;
-			}
 		}
 
 		// Play the current hovered pixel if mouse have been moved
+		//  && mode != gam::AudioFeedbackModes::NEVER_PLAY
 		const bool moved = (x != prevPixelX || y != prevPixelY);
-		if (moved && audioTimer >= m_uiRenderer.Audio()->note_interval && !m_uiRenderer.Audio()->mute && mode != gam::AudioFeedbackModes::NEVER_PLAY) {
+		if (moved && audioTimer >= m_uiRenderer.Audio()->note_interval && !m_uiRenderer.Audio()->mute) {
 			SimTable* simTable = renderingStrategy->getSimTable();
 
-			float value = 0.0f;
-			if (metric == gam::AudioMetric::IMPORTANCE) {
-				value = simTable->getImportanceTable().at(id - 1);
-			}
-			else if (metric == gam::AudioMetric::DISTANCE) {
-				if (mode == gam::AudioFeedbackModes::ONLY_SELECTION) {
-					value = simTable->get(m_uiRenderer.focusLineID, id - 1, m_uiRenderer.selectionRange);
-				}
-				else {
-					value = simTable->get(m_uiRenderer.focusLineID, id - 1, 1.0f);
-				}
-
-			}
-			
-			if (mode == gam::AudioFeedbackModes::ONLY_SELECTION && value > 0.0) {
-				m_AudioPlayer.setStringFreqOnMetric(value, metric);
-				m_AudioPlayer.pluck.reset();
-				m_AudioPlayer.start();
-				prevID = id;
-				audioTimer = 0.0f;
-			}
-
-			if (mode == gam::AudioFeedbackModes::ALWAYS_PLAY) {
-				m_AudioPlayer.setStringFreqOnMetric(value, metric);
-				m_AudioPlayer.pluck.reset();
-				m_AudioPlayer.start();
-				prevID = id;
-				audioTimer = 0.0f;
-			}
-
+			const float value = simTable->getImportanceTable().at(id - 1);
+			m_AudioPlayer.playNote(value);
+			prevID = id;
+			audioTimer = 0.0f;
 
 		}
-
+		
 
 	}
 
 	prevPixelX = x;
 	prevPixelY = y;
-
-	/*
-	if (viewer()->foldAnimation()) {
-		SimTable* simTable = renderingStrategy->getSimTable();
-		m_AudioPlayer.clearQueue();
-
-		// Read Contents of the SSBO
-		for (int i = 0; i < numberOfTrajectories; i++) {
-			uint curr = 0;
-			m_idBuffer->getSubData(i * sizeof(uint), sizeof(uint), &curr);
-			
-			if (curr > 0) {
-				const float currImp = simTable->getImportanceTable().at(curr-1);
-				m_AudioPlayer.addNote(currImp);
-			};
-
-		}
-		//m_AudioPlayer.prepareStart();
-		m_AudioPlayer.start();
-	}
-	else {
-		//m_AudioPlayer.audioIO().stop();
-
-	}
-	*/
 
 	m_idBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 
