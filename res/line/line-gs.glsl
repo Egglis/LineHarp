@@ -43,6 +43,7 @@ flat out vec4 gsEnd;
 flat out vec4 gsNext;
 
 flat out vec2 segDir;
+flat in vec2[2] segDirPreDisplacement;
 
 uniform mat4 modelViewProjectionMatrix;
 
@@ -87,7 +88,7 @@ void main() {
 	gsNext = vec4(vsOut[1].next, 0, 1);
 
 
-	segDir = normalize(gsEnd - gsStart).xy;
+	segDir = segDirPreDisplacement[0];
 
 	spawnPoint(vsOut[0].left, 0);
 	spawnPoint(vsOut[0].right, 0);

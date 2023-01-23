@@ -26,6 +26,8 @@ patch in float imp_p3;
 patch in float t_value;
 uniform float pullTime;
 
+flat out vec2 segDirPreDisplacement;
+
 
 // Magic lens
 uniform float lineWidth;
@@ -122,7 +124,8 @@ void main(){
 	int vertexIndex = int(round(u * totalPoints)); 
 	float du = 1.0f/totalPoints;
 
-	
+	segDirPreDisplacement = normalize(p2 - p1).xy;
+
 	//vec3 pcn = calulateInterpolationValues(p1, p2, u);
 	//float t0 = pcn.x;
 	//float t1 = pcn.y;
