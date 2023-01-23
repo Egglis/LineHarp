@@ -327,6 +327,14 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 				viewer->m_pullAnimation = false;
 			}
 		}
+		else if (key == GLFW_KEY_G) {
+			if (action == GLFW_PRESS) {
+				viewer->m_playAudio = true;
+			}
+			else if (action == GLFW_RELEASE) {
+				viewer->m_playAudio = false;
+			}
+		}
 
 
 		for (auto& i : viewer->m_interactors)

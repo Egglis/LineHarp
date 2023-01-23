@@ -173,6 +173,7 @@ void UiRenderer::audioSettingsGUI() {
 	if (ImGui::BeginMenu("Audio")) {
 		ImGui::SliderFloat("Interval between each note:", &m_audioSettings.note_interval, 0.0, 1.0);
 		ImGui::SliderFloat("Note Volume", &m_audioSettings.volume, 0.0, 1.0);
+		ImGui::SliderFloat("Lowest possible amplitude:", &m_audioSettings.minAmp, 0.0, 1.0);
 		/*
 		// Set up the Note Range
 		const int min = 0;
@@ -201,7 +202,6 @@ void UiRenderer::audioSettingsGUI() {
 		ImGui::Spacing();
 
 		ImGui::Checkbox("Play Notes When Clicking", &m_audioSettings.enableNotesWhileClicking);
-		ImGui::Combo("Audio Feedback mode while moving:", &m_audioSettings.playingMode, "Every Line\0Only Selected Lines\0Never Play");
 		ImGui::Combo("Audio Frequency Metric", &m_audioSettings.metric, "Importance\0Distance");
 		
 		m_audioSettings.mute = m_audioSettings.volume <= 0.0f;
@@ -210,6 +210,11 @@ void UiRenderer::audioSettingsGUI() {
 		ImGui::EndMenu();
 	}
 
+}
+
+// TODO
+void lineweaver::UiRenderer::keybindingsInfoGUI()
+{
 }
 
 

@@ -63,14 +63,15 @@ namespace lineweaver
 		std::unique_ptr<globjects::Buffer> m_visiblePixelBuffer = std::make_unique<globjects::Buffer>();
 		
 		//SSBO for detecting which lines are within the radius
-		std::unique_ptr<globjects::Buffer> m_idBuffer = std::make_unique<globjects::Buffer>();
+		std::unique_ptr<globjects::Buffer> m_lensBuffer = std::make_unique<globjects::Buffer>();
 
 		std::unique_ptr<globjects::Texture> m_lineChartTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_depthTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_offsetTexture = nullptr;
 		std::unique_ptr<globjects::Texture> m_blurTexture[2] = { nullptr, nullptr };
 		std::unique_ptr<globjects::Texture> m_volumeTexture = nullptr;
-		std::unique_ptr<globjects::Texture> m_IdTexture = nullptr;
+		std::unique_ptr<globjects::Texture> m_segmentAngleTexture = nullptr;
+
 
 
 

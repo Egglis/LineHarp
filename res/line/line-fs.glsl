@@ -12,6 +12,7 @@ struct BufferEntry
 
 	float importance;
 	vec4 color;
+	vec2 dir;
 };
 
 layout(std430, binding = 1) buffer intersectionBuffer
@@ -38,6 +39,8 @@ flat in vec4 gsStart;
 flat in vec4 gsEnd;
 #endif
 
+flat in vec2 segDir;
+
 uniform vec2 viewportSize;
 
 uniform vec3 lineColor;
@@ -55,6 +58,13 @@ uniform float brushingAngle;
 uniform float testSlider;
 uniform float similarity;
 
+vec3 indexToColor(int index) {
+	return vec3(
+	float(index & 0xff) / 255.0,
+	float((index >> 8) & 0xff) / 255.0,
+	float((index >> 16) & 0xff) / 255.0
+);
+}
 float computeDistanceToLineSegment(vec2 v, vec2 w, vec2 p){
 
 	// consider the current aspect ratio to make sure all lines have equal width
@@ -139,7 +149,11 @@ void main()
 		//Debug - Output computed importance as color -------------------------
 		//lineChartTexture.rgb = vec3(1,0,0)*(1.0f-pxlDistance/lensRadius)*scaling;
 		//---------------------------------------------------------------------
+
+		
 	}
+
+
 #endif
 
 #ifdef ANGULAR_BRUSHING
@@ -202,6 +216,7 @@ void main()
 	//lineChartTexture.rgb = vec3(1,0,0)*(1.0f-pxlDistance/lensRadius);
 	lineChartTexture.a = opacity;
 
+
 #ifdef LINE_HALOS
 	float depthOutline = smoothstep(0.0,0.0+w,dn);
 	gl_FragDepth = (1.0-currentImportance*depthOutline);
@@ -218,6 +233,7 @@ void main()
 	entry.id = trajectoryID;
 	entry.previous = prev;
 	entry.importance = currentImportance;
+	entry.dir = segDir;
 
 	if(focusLineID == trajectoryID){
 		// make sure line in focus is fully opaque
@@ -227,6 +243,7 @@ void main()
 		entry.color = lineChartTexture*opacityMultiplyer;
 	}
 	intersections[index] = entry;
+
 #endif
-	
+
 }

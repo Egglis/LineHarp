@@ -79,8 +79,8 @@ namespace lineweaver
 
 		bool foldAnimation() { return m_foldAnimation; };
 		void endFoldAnimation() { m_foldAnimation = false; };
-
 		bool pullAnimation() { return m_pullAnimation; };
+		bool playAudioQueue() { return m_playAudio; };
 
 	private:
 
@@ -149,6 +149,7 @@ namespace lineweaver
 
 		bool m_foldAnimation = false;
 		bool m_pullAnimation = false;
+		bool m_playAudio = false;
 	};
 
 

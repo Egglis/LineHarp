@@ -42,6 +42,8 @@ flat out vec4 gsStart;
 flat out vec4 gsEnd;
 flat out vec4 gsNext;
 
+flat out vec2 segDir;
+
 uniform mat4 modelViewProjectionMatrix;
 
 // Magic lens
@@ -83,6 +85,9 @@ void main() {
 	gsStart = gl_in[0].gl_Position;
 	gsEnd =  gl_in[1].gl_Position;
 	gsNext = vec4(vsOut[1].next, 0, 1);
+
+
+	segDir = normalize(gsEnd - gsStart).xy;
 
 	spawnPoint(vsOut[0].left, 0);
 	spawnPoint(vsOut[0].right, 0);

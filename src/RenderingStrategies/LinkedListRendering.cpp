@@ -63,6 +63,7 @@ void lineweaver::LinkedListRendering::prepareIndicesBuffer()
 // fill the importance buffer using a data dependent metric
 void LinkedListRendering::prepareImportanceBuffer() {
 
+	isSeries = false;
 	//==================================================== GLOBAL LENGTH ============================================================
 
 	std::vector<float> lengthOfTrajectories;
@@ -120,13 +121,15 @@ void LinkedListRendering::prepareImportanceBuffer() {
 
 	m_activeImportance = tempImportance;
 	m_simTable.setActiveImportance(m_activeImportance);
-	m_simTable.setup(m_dataTable);
+	m_simTable.setup(m_dataTable, 0);
 
 }
 
 
 
 void LinkedListRendering::prepareImportanceBuffer(TableImportance* importance) {
+
+	isSeries = false;
 
 	// store importance data and fill buffers
 	m_importanceTable = importance;
@@ -142,7 +145,7 @@ void LinkedListRendering::prepareImportanceBuffer(TableImportance* importance) {
 	}
 
 	m_simTable.setActiveImportance(m_activeImportance);
-	m_simTable.setup(m_importanceTable);
+	m_simTable.setup(m_importanceTable, 0);
 }
 
 
@@ -256,6 +259,7 @@ float overlap(vec2 aCurr, vec2 aNext, vec2 bCurr, vec2 bNext)
 
 void LinkedListRendering::weaveSeries(const TableData& table)
 {
+	isSeries = true;
 /*
 	std::vector<vec2> sub,clp,res;
 	sub.push_back(vec2(50,150));
@@ -493,7 +497,7 @@ void LinkedListRendering::weaveSeries(const TableData& table)
 	m_simTable.setActiveX(m_activeXColumn);
 	m_simTable.setActiveY(m_activeYColumn);
 	const Table* t = &table;
-	m_simTable.setup(t);
+	m_simTable.setup(t, 1);
 }
 
 
@@ -506,8 +510,9 @@ void LinkedListRendering::performRendering(globjects::Program* p, globjects::Ver
 		p->setUniform("numberOfTimesteps", m_dataTable->m_numberOfTimesteps[i]);
 		p->setUniform("trajectoryID", i);
 
-
-		float const similarity = m_simTable.get(m_focusID, i, m_selectionRange);
+		float similarity = 0.0;
+		similarity = m_simTable.get(m_focusID, i, m_selectionRange);
+		
 		p->setUniform("similarity", similarity);
 		// Compute/Retrive the similarity value 0 -> 1, where 1 = Focus Line ID
 

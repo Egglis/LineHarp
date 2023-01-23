@@ -39,6 +39,7 @@ namespace lineweaver
 		float m_selectionRange = 0.1f;
 
 		SimTable m_simTable; 
+		bool isSeries = false;
 	};
 	
 }

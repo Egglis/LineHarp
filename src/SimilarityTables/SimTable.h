@@ -1,7 +1,10 @@
 #pragma once
 #include <vector>
-
+#include <fstream>
 #include <numeric>
+#include <filesystem>
+
+
 #include "../CSV/Table.h"
 
 enum SelectionModes {
@@ -15,11 +18,32 @@ enum SelectionModes {
 
 namespace lineweaver {
 
+
+
+	class SimTableCache {
+	public:
+		int makeCacheFolder(std::string& fileName);
+		int save(const std::string& filepath, const std::vector<std::vector<float>>& data, int type);
+		std::vector<std::vector<float>> load(const std::string& filepath, int type);
+		std::vector<float> loadImportance(const std::string& filepath);
+		int saveImportance(const std::string& filepath, const std::vector<float>& data);
+		bool isCache(std::string& fileName);
+	private:
+		std::vector<std::string> m_fileNames{
+			"importance.bin",
+			"midPoint.bin",
+			"minDist.bin",
+			"hausdorf.bin",
+			"frechet.bin"
+		};
+		std::string newPath = "src\\SimilarityTables\\Cache";
+	};
+
 	class SimTable {
 	public:
 		float get(int focus, int current, float range); // row, col, range
-		void setup(Table* table);
-		void setup(const Table* table);
+		void setup(Table* table, int mode);
+		void setup(const Table* table, int mode);
 
 		void setActiveX(std::vector<float> x) { m_x = normalize(x); };
 		void setActiveY(std::vector<float> y) { m_y = normalize(y); };
@@ -54,6 +78,8 @@ namespace lineweaver {
 		std::vector<float> m_importance;
 		
 		SelectionModes m_mode;
+
+		SimTableCache mCache;
 	};
 
 };

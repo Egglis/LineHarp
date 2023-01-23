@@ -3,7 +3,7 @@
 #include "/globals.glsl"
 
 layout (location = 0) out vec4 lineChartTexture;
-layout (location = 2) out uint IdTexture;
+layout (location = 2) out vec4 segInfoTexture;
 
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 
@@ -32,6 +32,7 @@ struct BufferEntry
 
 	float importance;
 	vec4 color;
+	vec2 dir;
 };
 
 layout(std430, binding = 1) buffer intersectionBuffer
@@ -52,9 +53,10 @@ layout(std430, binding = 3) buffer visiblePixelBuffer
 	uint visiblePixelCounter[];
 };
 
-layout(std430, binding = 4) buffer idBuffer
+
+layout(std430, binding = 4) buffer lensBuffer
 {
-	uint linesWithinLens[];
+	vec4 linesWithinLens[];
 };
 
 // compute weight dependent on depth value 'z' within 0.1f <= |z| <= 500
@@ -82,8 +84,10 @@ void main()
 	ivec2 fragCoord = ivec2(gl_FragCoord.xy);
 	vec4 blurValue = texelFetch(blurTexture,fragCoord,0);
 
+
 	int currentID = -1;
-	IdTexture = -1;
+	segInfoTexture = vec4(-1);
+	vec4 segmentInformation = vec4(-1);
 
 #ifdef RS_LINKEDLIST
 	const uint maxEntries = 256;
@@ -151,7 +155,6 @@ void main()
 
 	// Option 2: Hybrid Visibility Composition =====================================================================
 	// Bruckner et al., 2010: https://www.cg.tuwien.ac.at/research/publications/2010/bruckner-2010-HVC/
-
 	for (int i=0; i<entryCount; i++){
 		
 		uint iIndexI = indices[i];
@@ -199,11 +202,27 @@ void main()
 				vecSum /= vecSum.a;
  
             vecSum *= intersections[iIndexI].color.a;
- 
             blendedColor = porterDuffOverOperator(vecSum,blendedColor);
-			IdTexture = (intersections[iIndexI].id + 1);
-			currentID = int((intersections[iIndexI].id + 1));
+			// Fill the segmentTexture with the required information for playing sounds
+			int id = int(intersections[iIndexI].id);
+			vec2 segDir = intersections[iIndexI].dir;
+			segmentInformation = vec4(id, segDir.x, segDir.y, -1);
+
+
+			segInfoTexture = segmentInformation;
+			float aspectRatio2 = viewportSize.x/viewportSize.y;
+			vec2 ndCoordinates2 = (gl_FragCoord.xy-viewportSize/2)/(viewportSize/2);
+			float pxlDistance2 = length((lensPosition-ndCoordinates2) * vec2(aspectRatio2, 1.0));
+	
+			if(pxlDistance2 <= lensRadius){
+				linesWithinLens[id] = segmentInformation;
+			} 
+
+			currentID = id;
 		}
+
+		
+
 
     }
 
@@ -235,6 +254,7 @@ void main()
 	blendedColor.rgb = clamp(blendedColor.rgb+1.5*vec3(diff),vec3(0.0),vec3(1.0));
 
 	lineChartTexture = blendedColor;
+
 #else
 	// intentionally, do nothing!
 #endif
@@ -259,9 +279,6 @@ void main()
 		lineChartTexture.rgb = mix(lineChartTexture.rgb, lensBorderColor, 1.0f - smoothstep(lensRadius, endOuter, pxlDistance));
 	}
 
-	if(pxlDistance <= lensRadius){
-		atomicExchange(linesWithinLens[currentID], currentID + 1);
-	} 
 
 	
 	/*

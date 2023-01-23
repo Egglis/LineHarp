@@ -6,6 +6,17 @@
 #include "Note.h"
 #include <deque>
 
+struct QueNote {
+	int id;
+	float amp;
+	int angle;
+	QueNote(int id, float amp, int angle) : id{ id }, amp{amp}, angle{ angle } {};
+
+	bool operator<(const QueNote& a) const {
+		return amp > a.amp; 
+	};
+};
+
 namespace gam {
 
 	class NoteMap;
@@ -18,20 +29,50 @@ namespace gam {
 
 		// Decides how often a note is played
 		Accum<> tmr{ 1.0 / 0.2 }; 
-		Note note1 = Note(440, 1.0);
-		Note note2 = Note(440, 1.0);
-
-		std::deque<Note> notes;
 
 
-		void playNote(float value);
+		Note note0 = Note();
+		Note note1 = Note();
+		Note note2 = Note();
+		Note note3 = Note();
+		Note note4 = Note();
+		Note note5 = Note();
+
+		std::vector<Note*> mNotes{
+			&note0,
+			&note1,
+			&note2,
+			&note3,
+			&note4,
+			&note5
+		};
+
+		void playNote(float value, int angle);
+
+
+		void addNoteToQueue(int id, float amp, int angle);
+		void playQueue(float deltaTime);
+		void stopQueue()  { playQue = false; };
+		void startQueue() { playQue = true; };
+		void resetQueue() { mQueue.clear(); };
+		bool isQuePlaying() { return playQue; };
+		void sortQueue(int metric) { std::sort(mQueue.begin(), mQueue.end()); };
 
 		void onAudio(AudioIOData& io);
+		void resetAllStrings();
 
 	private:
 		lineweaver::UiRenderer* m_ui;
-	};
+		std::vector<QueNote> mQueue;
 
+		int mCurrentString = 0;
+		bool mAudioOn = false;
+		bool playQue = false;
+
+
+		float intervalTimer = 0.0f;
+		int index = 0;
+	};
 }
 
 

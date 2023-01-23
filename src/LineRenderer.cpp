@@ -109,13 +109,13 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer(), m
 	m_offsetTexture->setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	m_offsetTexture->image2D(0, GL_R32UI, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
 
-	m_IdTexture = Texture::create(GL_TEXTURE_2D);
-	m_IdTexture->setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	m_IdTexture->setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	m_IdTexture->setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	m_IdTexture->setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	m_IdTexture->image2D(0, GL_R32I, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
 
+	m_segmentAngleTexture = Texture::create(GL_TEXTURE_2D);
+	m_segmentAngleTexture->setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	m_segmentAngleTexture->setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	m_segmentAngleTexture->setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	m_segmentAngleTexture->setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	m_segmentAngleTexture->image2D(0, GL_RGBA32F, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_INT, nullptr);
 
 	m_blurFramebuffer = Framebuffer::create();
 	m_blurFramebuffer->attachTexture(GL_COLOR_ATTACHMENT0, m_blurTexture[0].get());
@@ -127,7 +127,7 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer(), m
 	m_lineFramebuffer = Framebuffer::create();
 	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT0, m_lineChartTexture.get());
 	m_lineFramebuffer->attachTexture(GL_DEPTH_ATTACHMENT, m_depthTexture.get());
-	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT2, m_IdTexture.get());
+	m_lineFramebuffer->attachTexture(GL_COLOR_ATTACHMENT2, m_segmentAngleTexture.get());
 	m_lineFramebuffer->setDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 });
 	
 
@@ -146,7 +146,7 @@ void LineRenderer::display()
 		m_lineChartTexture->image2D(0, GL_RGBA32F, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		m_depthTexture->image2D(0, GL_DEPTH_COMPONENT, m_framebufferSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
 		m_offsetTexture->image2D(0, GL_R32UI, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
-		m_IdTexture->image2D(0, GL_R32I, m_framebufferSize, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+		m_segmentAngleTexture->image2D(0, GL_RGBA32F, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_INT, nullptr);
 
 		for (int i = 0; i < 2; i++)
 			m_blurTexture[i]->image2D(0, GL_RGBA, m_framebufferSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -364,6 +364,16 @@ void LineRenderer::display()
 
 	}
 
+	double mouseX, mouseY;
+	glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+
+	glm::vec2 position = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
+
+	// Translate Mouse Position into pixel position
+	int xPixel = (position.x * viewportSize.x / 2) + viewportSize.x / 2;
+	int yPixel = (position.y * viewportSize.y / 2) + viewportSize.y / 2;
+
+
 
 	int numberOfTrajectories = viewer()->scene()->tableData()->m_numberOfTrajectories;
 	std::vector<int> numberOfTimesteps = viewer()->scene()->tableData()->m_numberOfTimesteps;
@@ -391,6 +401,7 @@ void LineRenderer::display()
 
 	deltaTime *= m_uiRenderer.Animation()->globalAnimationFactor;
 	audioTimer += deltaTime;
+	m_AudioPlayer.playQueue(deltaTime);
 
 
 	// Displacement timer
@@ -477,6 +488,9 @@ void LineRenderer::display()
 	glBlendEquationi(0, GL_FUNC_ADD);
 	*/
 
+	
+
+
 
 
 	// SSBO --------------------------------------------------------------------------------------------
@@ -490,8 +504,6 @@ void LineRenderer::display()
 
 
 	// -------------------------------------------------------------------------------------------------
-
-
 
 
 	m_offsetTexture->bindImageTexture(0, 0, false, 0, GL_READ_WRITE, GL_R32UI);
@@ -609,11 +621,6 @@ void LineRenderer::display()
 	m_vaoQuad->unbind();
 
 
-
-
-
-
-
 	glDepthMask(GL_TRUE);
 	m_blurFramebuffer->unbind();
 
@@ -645,13 +652,16 @@ void LineRenderer::display()
 		m_visiblePixelBuffer->clearSubData(GL_R32UI, 0, sizeof(uint) * numberOfTrajectories, GL_RED_INTEGER, GL_UNSIGNED_INT, &bufferCounterClearValue);
 	}
 
-	// Clear id buffer
-	m_idBuffer = std::make_unique <globjects::Buffer>();
-	m_idBuffer->setStorage(sizeof(uint) * numberOfTrajectories, nullptr, gl::GL_NONE_BIT);
-	m_idBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
-	const uint bufferIdClearValue = 0;
-	m_idBuffer->clearSubData(GL_R32UI, 0, sizeof(uint) * numberOfTrajectories, GL_RED_INTEGER, GL_UNSIGNED_INT, &bufferIdClearValue);
 
+	// Clear id buffer
+	m_lensBuffer = std::make_unique <globjects::Buffer>();
+	m_lensBuffer->setStorage(sizeof(vec4) * numberOfTrajectories, nullptr, gl::GL_NONE_BIT);
+	m_lensBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 4);
+
+	const vec4 zero = vec4(0.0f);
+	m_lensBuffer->clearSubData(GL_RGBA32F, 0, sizeof(vec4) * numberOfTrajectories, GL_RGBA, GL_FLOAT, &zero);
+	// ------
+	
 	// -------------------------------------------------------------------------------------------------
 
 	m_offsetTexture->bindActive(0);
@@ -686,36 +696,47 @@ void LineRenderer::display()
 		m_uiRenderer.Audio()->reset = false;
 	}
 
-
+	// Read the angle from texture
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
-	double mouseX, mouseY;
-	glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+	GLfloat data[4];
+	glReadPixels(xPixel, yPixel, 1, 1, GL_RGBA, GL_FLOAT, &data);
+	
+	int id = int(data[0]);
+	float xDir = float(data[1]);
+	float yDir = float(data[2]);
+	
+	// globjects::debug() << id << ", " << xDir << ", " << yDir << ", " << data[3] << std::endl;
 
-	glm::vec2 position = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
+	const float radians = acos(dot(vec2(xDir, yDir), vec2(0.0, -1.0)));
+	const int degrees = int(round(radians * (180.0 / glm::pi<float>())));
 
-	// Translate Mouse Position into pixel position
-	int x = (position.x * viewportSize.x / 2) + viewportSize.x / 2;
-	int y = (position.y * viewportSize.y / 2) + viewportSize.y / 2;
 
-	int id = 0;
-	glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &id);
+	glReadBuffer(GL_NONE);
 
-	//const gam::AudioMetric metric = static_cast<gam::AudioMetric>(m_uiRenderer.Audio()->metric);
-	//const gam::AudioFeedbackModes mode = static_cast<gam::AudioFeedbackModes>(m_uiRenderer.Audio()->playingMode);
-
-	if (id != 0 && id <= numberOfTrajectories) {
-		if (viewer()->m_mousePressed[0] && prevID != id-1) {
-			m_uiRenderer.setFocusId(id - 1);
+	int metric = m_uiRenderer.Audio()->metric;
+	if (id >= 0 && id <= numberOfTrajectories && degrees < 181 && !m_AudioPlayer.isQuePlaying()) {
+		if (viewer()->m_mousePressed[0] && prevID != id) {
+			m_uiRenderer.setFocusId(id);
 		}
 
 		// Play the current hovered pixel if mouse have been moved
 		//  && mode != gam::AudioFeedbackModes::NEVER_PLAY
-		const bool moved = (x != prevPixelX || y != prevPixelY);
+		const bool moved = (xPixel != prevPixelX || yPixel != prevPixelY);
 		if (moved && audioTimer >= m_uiRenderer.Audio()->note_interval && !m_uiRenderer.Audio()->mute) {
 			SimTable* simTable = renderingStrategy->getSimTable();
+			float vol = 0.0;
 
-			const float value = simTable->getImportanceTable().at(id - 1);
-			m_AudioPlayer.playNote(value);
+			if (metric == 0) {
+				vol = simTable->getImportanceTable().at(id); // Importance
+			}
+			else if (metric == 1) {					
+				vol = simTable->get(m_uiRenderer.focusLineID, id, m_uiRenderer.selectionRange);
+			}
+
+
+
+
+			m_AudioPlayer.playNote(vol, degrees);
 			prevID = id;
 			audioTimer = 0.0f;
 
@@ -724,12 +745,50 @@ void LineRenderer::display()
 
 	}
 
-	prevPixelX = x;
-	prevPixelY = y;
 
-	m_idBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
+	if (viewer()->playAudioQueue()) {
+		m_AudioPlayer.resetQueue();
+
+		SimTable* simTable = renderingStrategy->getSimTable();
+
+		for (int i = 0; i < numberOfTrajectories; i++) {
+			vec4 segInfo;
+			m_lensBuffer->getSubData(i * sizeof(vec4), sizeof(vec4), &segInfo);
+
+			// Within the lens
+			if (segInfo.a == -1) {
+
+				const float radians = acos(dot(vec2(float(segInfo.y), float(segInfo.z)), vec2(0.0, -1.0)));
+				const int degrees = int(round(radians * (180.0 / glm::pi<float>())));
+
+				/// /// globjects::debug() << degrees << std::endl;
+				float vol = 0.0;
+				if (metric == 0) {
+					vol = simTable->getImportanceTable().at(i); // Importance
+				}
+				else if (metric == 1) {
+					vol = simTable->get(m_uiRenderer.focusLineID, i, m_uiRenderer.selectionRange);
+				}
+				m_AudioPlayer.addNoteToQueue(i, vol, degrees);
+			}
+
+		}
+
+
+		// Once all lines have been addded, the queue is sorted based on some metric
+		// TODO
+		m_AudioPlayer.sortQueue(0);
+		m_AudioPlayer.startQueue();
+
+	}
+
+	
+	prevPixelX = xPixel;
+	prevPixelY = yPixel;
+
 
 	// SSBO --------------------------------------------------------------------------------------------
+	m_lensBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 	m_intersectionBuffer->unbind(GL_SHADER_STORAGE_BUFFER);
 
 

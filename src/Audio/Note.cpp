@@ -12,4 +12,9 @@ Note::Note(float freq, float amp) : m_freq{ freq }, m_amp{ amp }
 
 }
 
+void Note::angFreq(int ang)
+{
+    freq(FreqMap::mapAngleToNote(ang));
+}
+
 

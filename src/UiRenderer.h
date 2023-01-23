@@ -35,8 +35,10 @@ namespace Settings {
 		bool enableNotesWhileClicking = true;
 		bool reset = false;
 
-		int playingMode = 0;
+
 		int metric = 0;
+		
+		float minAmp = 0.2;
 	};
 
 	struct File {
@@ -93,6 +95,7 @@ namespace lineweaver
 		void audioSettingsGUI();
 		Settings::Audio* Audio() { return &m_audioSettings; };
 
+		void keybindingsInfoGUI();
 
 		// Collapsing headers for Line Graph: ------------
 		// File Settings

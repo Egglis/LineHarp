@@ -41,15 +41,82 @@ float SimTable::get(int focus, int current, float range) {
 }
 
 
-void SimTable::setup(Table* table) {
-	iterateLines(table);
-	setupImportanceVector(table);
+void SimTable::setup(Table* table, int mode) {
+
+	//globjects::debug() << table->m_filePath << std::endl;
+
+	int good = 0;
+	std::string filePath = table->m_fileName;
+
+	// Check if a cache entry exists for this data file
+	if (!mCache.isCache(filePath)) {
+		good = mCache.makeCacheFolder(filePath);
+		if (good == 1) { // Folder was generate correctly
+			iterateLines(table);
+			setupImportanceVector(table);
+
+			mCache.saveImportance(filePath, m_importanceTable);
+			mCache.save(filePath, m_midPointTable, 1);
+			mCache.save(filePath, m_minDistTable, 2);
+			mCache.save(filePath, m_hausdorffTable, 3);
+			mCache.save(filePath, m_frechetTable, 4);
+		}
+		else { // Use the normal slow method
+			iterateLines(table);
+			setupImportanceVector(table);
+		}
+
+	}
+	else { // Load data from cache
+		m_importanceTable = mCache.loadImportance(filePath);
+		m_midPointTable = mCache.load(filePath, 1);
+		m_minDistTable = mCache.load(filePath, 2);
+		m_hausdorffTable = mCache.load(filePath, 3);
+		m_frechetTable = mCache.load(filePath, 4);
+	}
+
 }
 
-void SimTable::setup(const Table* table) {
+void SimTable::setup(const Table* table, int mode) {
 	Table* copy = const_cast<Table*>(table);
-	iterateLines(copy);
-	setupImportanceVector(copy);
+
+	int good = 0;
+	std::string filePath = copy->m_fileName;
+
+
+	// Check if a cache entry exists for this data file
+	if (!mCache.isCache(filePath)) {
+		good = mCache.makeCacheFolder(filePath);
+		if (good == 1) { // Folder was generate correctly
+			if(mode == 0) iterateLines(copy);
+
+			setupImportanceVector(copy);
+
+			mCache.saveImportance(filePath, m_importanceTable);
+
+			if(mode == 0){
+				mCache.save(filePath, m_midPointTable, 1);
+				mCache.save(filePath, m_minDistTable, 2);
+				mCache.save(filePath, m_hausdorffTable, 3);
+				mCache.save(filePath, m_frechetTable, 4);
+			}
+		}
+		else { // Use the normal slow method
+			if(mode == 0) iterateLines(copy);
+			setupImportanceVector(copy);
+		}
+
+	}
+	else { // Load data from cache
+
+		m_importanceTable = mCache.loadImportance(filePath);
+		if (mode == 0) {
+			m_midPointTable = mCache.load(filePath, 1);
+			m_minDistTable = mCache.load(filePath, 2);
+			m_hausdorffTable = mCache.load(filePath, 3);
+			m_frechetTable = mCache.load(filePath, 4);
+		}
+	}
 }
 
 
@@ -197,4 +264,145 @@ std::vector<float> SimTable::normalize(std::vector<float> list)
 	}
 	return tmp;
 }
+
+bool lineweaver::SimTableCache::isCache(std::string& fileName)
+{
+	std::string file_path = fileName;
+	std::filesystem::path p(file_path);
+	std::string file_name = p.filename().string();
+
+	std::filesystem::path finalPath = std::filesystem::current_path() / newPath / file_name;
+	std::string folder_path =  finalPath.string();
+
+	if (std::filesystem::exists(folder_path) && std::filesystem::is_directory(folder_path)) {
+		globjects::debug() << "Directory exists" << std::endl;
+		return true;
+	}
+	else {
+		globjects::debug() << "Directory does not exist" << std::endl;
+		return false;
+	}
+	return false;
+}
+
+int SimTableCache::makeCacheFolder(std::string& fileName)
+{
+	std::string file_path = fileName;
+	std::filesystem::path p(file_path);
+	std::string file_name = p.filename().string();
+
+	std::filesystem::path finalPath = std::filesystem::current_path() / newPath / file_name;
+	std::string folder_path = finalPath.string();
+	std::error_code ec;
+
+	globjects::debug() << folder_path << std::endl;
+
+	if (std::filesystem::create_directory(folder_path, ec)) {
+		globjects::debug() << "Directory created successfully" << std::endl;
+		return 1;
+	}
+	else {
+		globjects::debug() << "Error creating directory: " << ec.message() << std::endl;
+		return 0;
+	}
+	return 0;
+}
+
+int SimTableCache::save(const std::string& filepath, const std::vector<std::vector<float>>& data, int type)
+{	
+
+	std::string file_path = filepath;
+	std::filesystem::path p(file_path);
+	std::string file_name = p.filename().string();
+
+	std::filesystem::path finalPath = std::filesystem::current_path() / newPath / file_name / m_fileNames.at(type);
+	std::string folder_path = finalPath.string();
+	globjects::debug() << type << ", " << folder_path << std::endl;
+
+	std::ofstream file(folder_path, std::ios::binary);
+	std::size_t rows = data.size();
+	std::size_t cols = data[0].size();
+
+	if (!file.good()) {
+		return 0;
+	}
+
+	file.write(reinterpret_cast<const char*>(&rows), sizeof(std::size_t));
+	file.write(reinterpret_cast<const char*>(&cols), sizeof(std::size_t));
+	for (const auto& row : data) {
+		file.write(reinterpret_cast<const char*>(row.data()), row.size() * sizeof(float));
+	}
+	file.close();
+	return 1;
+}
+
+std::vector<std::vector<float>> SimTableCache::load(const std::string& filepath, int type)
+{
+	std::string file_path = filepath;
+	std::filesystem::path p(file_path);
+	std::string file_name = p.filename().string();
+
+	std::filesystem::path finalPath = std::filesystem::current_path() / newPath / file_name / m_fileNames.at(type);
+	std::string folder_path = finalPath.string();
+
+
+	std::ifstream file(folder_path, std::ios::binary);
+	std::size_t rows, cols;
+
+	if (!file.good()) {
+		return std::vector<std::vector<float>>(0);
+	}
+
+	file.read(reinterpret_cast<char*>(&rows), sizeof(std::size_t));
+	file.read(reinterpret_cast<char*>(&cols), sizeof(std::size_t));
+	std::vector<std::vector<float>> data(rows, std::vector<float>(cols));
+	for (auto& row : data) {
+		file.read(reinterpret_cast<char*>(row.data()), row.size() * sizeof(float));
+	}
+	file.close();
+	return data;
+}
+
+std::vector<float> SimTableCache::loadImportance(const std::string& filepath)
+{
+	std::string file_path = filepath;
+	std::filesystem::path p(file_path);
+	std::string file_name = p.filename().string();
+
+	std::filesystem::path finalPath = std::filesystem::current_path() / newPath / file_name / m_fileNames.at(0);
+	std::string folder_path = finalPath.string();
+
+	std::vector<float> vec;
+	std::ifstream file(folder_path, std::ios::binary);
+	if (file.is_open()) {
+		file.seekg(0, std::ios::end);
+		std::streamsize size = file.tellg();
+		vec.resize(size / sizeof(float));
+		file.seekg(0, std::ios::beg);
+		file.read(reinterpret_cast<char*>(vec.data()), size);
+		file.close();
+	}
+	return vec;
+}
+
+int SimTableCache::saveImportance(const std::string& filepath, const std::vector<float>& data)
+{
+	std::string file_path = filepath;
+	std::filesystem::path p(file_path);
+	std::string file_name = p.filename().string();
+
+	std::filesystem::path finalPath = std::filesystem::current_path() / newPath / file_name / m_fileNames.at(0);
+	std::string folder_path = finalPath.string();
+
+
+	std::ofstream file(folder_path, std::ios::binary);
+	if (file.is_open()) {
+		file.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(float));
+		file.close();
+		return 1;
+	}
+	return 0;
+}
+
+
 
