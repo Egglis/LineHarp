@@ -113,12 +113,15 @@ namespace lineweaver
 
 		// Audio
 		gam::AudioPlayer m_AudioPlayer;
-		bool m_foldButtonHold = false;
 		float audioTimer = 0.0f;
 
 		int prevPixelX = 0;
 		int prevPixelY = 0;
 		int prevID = -1;
+
+		bool m_foldButtonHold = false;
+		bool m_reverseQue = false;
+		float m_pullAudioTimer = 0.0f;
 		// ------------------------------------------------------------------------------------------
 	};
 

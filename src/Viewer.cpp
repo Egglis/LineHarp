@@ -314,19 +314,21 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 		// Folding and Pulling Animations:
 		else if (key == GLFW_KEY_F) {
 			if(action == GLFW_PRESS){
-				viewer->m_foldAnimation = true;
+				viewer->m_foldButton.press();
 			} else if(action == GLFW_RELEASE){
-				viewer->m_foldAnimation = false;
+				viewer->m_foldButton.release();
 			}
 		}
 		else if (key == GLFW_KEY_P) {
 			if (action == GLFW_PRESS) {
-				viewer->m_pullAnimation = true;
+				viewer->m_pullButton.press();
 			}
 			else if (action == GLFW_RELEASE) {
-				viewer->m_pullAnimation = false;
+				viewer->m_pullButton.release();
 			}
 		}
+
+		// Audio play button
 		else if (key == GLFW_KEY_G) {
 			if (action == GLFW_PRESS) {
 				viewer->m_playAudio = true;

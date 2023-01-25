@@ -14,13 +14,13 @@ namespace gam {
 		void freq(float freq) { m_string.freq(freq); };
 		void amp(float amp) { m_amp = amp; };
 		void mute() { m_amp = 0.0 - m_minVol; }
-		
+		bool done() { return m_string.done(); };
 		void setMinimumAmp(float amp) { m_minVol = amp; };
 	private:
 		PluckedString m_string{ 440 };
-		std::string m_name;
-		float m_freq;
-		float m_amp;
+		std::string m_name = "n";
+		float m_freq = 440;
+		float m_amp = 0.1;
 		float m_minVol = 0.2;
 	};
 }

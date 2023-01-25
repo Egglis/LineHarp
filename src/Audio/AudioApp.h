@@ -18,7 +18,7 @@ namespace gam {
 
 		void initAudio(
 			double framesPerSec, unsigned framesPerBuffer = 128,
-			unsigned outChans = 2, unsigned inChans = 0
+			unsigned outChans = 2, unsigned inChans = 2
 		) {
 			mAudioIO.framesPerSecond(framesPerSec);
 			mAudioIO.framesPerBuffer(framesPerBuffer);
@@ -31,10 +31,6 @@ namespace gam {
 
 		void start(bool block = false) {
 			mAudioIO.start();
-			if (block) {
-				printf("Press 'enter' to quit...\n");
-
-			}
 		}
 
 	private:

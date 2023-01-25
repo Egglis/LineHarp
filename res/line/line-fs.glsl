@@ -13,6 +13,7 @@ struct BufferEntry
 	float importance;
 	vec4 color;
 	vec2 dir;
+	float dist;
 };
 
 layout(std430, binding = 1) buffer intersectionBuffer
@@ -40,6 +41,7 @@ flat in vec4 gsEnd;
 #endif
 
 flat in vec2 segDir;
+flat in float segDist;
 
 uniform vec2 viewportSize;
 
@@ -234,6 +236,7 @@ void main()
 	entry.previous = prev;
 	entry.importance = currentImportance;
 	entry.dir = segDir;
+	entry.dist = segDist;
 
 	if(focusLineID == trajectoryID){
 		// make sure line in focus is fully opaque

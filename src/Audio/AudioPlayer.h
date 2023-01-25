@@ -5,6 +5,7 @@
 #include "../UiRenderer.h"
 #include "Note.h"
 #include <deque>
+#include <atomic>
 
 struct QueNote {
 	int id;
@@ -31,12 +32,12 @@ namespace gam {
 		Accum<> tmr{ 1.0 / 0.2 }; 
 
 
-		Note note0 = Note();
-		Note note1 = Note();
-		Note note2 = Note();
-		Note note3 = Note();
-		Note note4 = Note();
-		Note note5 = Note();
+		Note note0 = Note(440, 0.0);
+		Note note1 = Note(440, 0.0);
+		Note note2 = Note(440, 0.0);
+		Note note3 = Note(440, 0.0);
+		Note note4 = Note(440, 0.0);
+		Note note5 = Note(440, 0.0);
 
 		std::vector<Note*> mNotes{
 			&note0,
@@ -51,15 +52,21 @@ namespace gam {
 
 
 		void addNoteToQueue(int id, float amp, int angle);
+		void addMuteNote();
 		void playQueue(float deltaTime);
 		void stopQueue()  { playQue = false; };
 		void startQueue() { playQue = true; };
-		void resetQueue() { mQueue.clear(); };
+		void resetQueue() { 
+			mQueue.clear();
+		};
 		bool isQuePlaying() { return playQue; };
 		void sortQueue(int metric) { std::sort(mQueue.begin(), mQueue.end()); };
+		void reverseQueue() { std::reverse(mQueue.begin(), mQueue.end()); };
 
 		void onAudio(AudioIOData& io);
 		void resetAllStrings();
+
+		void addToSound(float pluck);
 
 	private:
 		lineweaver::UiRenderer* m_ui;
@@ -69,9 +76,15 @@ namespace gam {
 		bool mAudioOn = false;
 		bool playQue = false;
 
+		bool blockThread = false;
+		bool blockNoteChanging = false;
 
 		float intervalTimer = 0.0f;
+
 		int index = 0;
+
+
+		float ms = 0;
 	};
 }
 

@@ -401,7 +401,6 @@ void LineRenderer::display()
 
 	deltaTime *= m_uiRenderer.Animation()->globalAnimationFactor;
 	audioTimer += deltaTime;
-	m_AudioPlayer.playQueue(deltaTime);
 
 
 	// Displacement timer
@@ -443,24 +442,26 @@ void LineRenderer::display()
 		}
 	}
 
+
 	// Fold Animation:
-	if (viewer()->foldAnimation()) {
-		m_foldTimer = min(1.0f, m_foldTimer + (deltaTime * m_uiRenderer.Animation()->foldAnimationSpeed));
+	const float foldDelta = (deltaTime * m_uiRenderer.Animation()->foldAnimationSpeed);;
+	if (viewer()->m_foldButton.pressed) {
+		m_foldTimer = min(1.0f, m_foldTimer + foldDelta);
 		viewer()->m_lensDepthValue = min(viewer()->m_lensDepthValue, 1.0f);
 	} else {
-		m_foldTimer = max(0.0f, m_foldTimer - (deltaTime * m_uiRenderer.Animation()->foldAnimationSpeed));
+		m_foldTimer = max(0.0f, m_foldTimer - foldDelta);
 	}
 
 	// Pulling Animation:
-	if (viewer()->pullAnimation()) {
-		m_pullTimer = min(1.0f, m_pullTimer + (deltaTime * m_uiRenderer.Animation()->pullAnimationSpeed));
+	const float pullDelta = (deltaTime * m_uiRenderer.Animation()->pullAnimationSpeed);
+	if (viewer()->m_pullButton.pressed) {
+		m_pullTimer = min(1.0f, m_pullTimer + pullDelta);
 	}
 	else {
-		m_pullTimer = max(0.0f, m_pullTimer - (deltaTime * m_uiRenderer.Animation()->pullAnimationSpeed));
+		m_pullTimer = max(0.0f, m_pullTimer - pullDelta);
 	}
 
 
-	m_prevTime = currTime;
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Line rendering pass and linked list generation
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -694,6 +695,7 @@ void LineRenderer::display()
 	if (m_uiRenderer.Audio()->reset) {
 		m_AudioPlayer.audioIO().close();
 		m_uiRenderer.Audio()->reset = false;
+		m_AudioPlayer.start();
 	}
 
 	// Read the angle from texture
@@ -714,7 +716,8 @@ void LineRenderer::display()
 	glReadBuffer(GL_NONE);
 
 	int metric = m_uiRenderer.Audio()->metric;
-	if (id >= 0 && id <= numberOfTrajectories && degrees < 181 && !m_AudioPlayer.isQuePlaying()) {
+	if (id >= 0 && id <= numberOfTrajectories && degrees < 181 && !m_AudioPlayer.isQuePlaying()
+		&& !viewer()->m_foldButton.hold && !viewer()->m_pullButton.hold) {
 		if (viewer()->m_mousePressed[0] && prevID != id) {
 			m_uiRenderer.setFocusId(id);
 		}
@@ -745,8 +748,8 @@ void LineRenderer::display()
 
 	}
 
-
 	if (viewer()->playAudioQueue()) {
+		m_AudioPlayer.stopQueue();
 		m_AudioPlayer.resetQueue();
 
 		SimTable* simTable = renderingStrategy->getSimTable();
@@ -756,12 +759,11 @@ void LineRenderer::display()
 			m_lensBuffer->getSubData(i * sizeof(vec4), sizeof(vec4), &segInfo);
 
 			// Within the lens
-			if (segInfo.a == -1) {
+			if (segInfo.a > 0) {
 
 				const float radians = acos(dot(vec2(float(segInfo.y), float(segInfo.z)), vec2(0.0, -1.0)));
 				const int degrees = int(round(radians * (180.0 / glm::pi<float>())));
 
-				/// /// globjects::debug() << degrees << std::endl;
 				float vol = 0.0;
 				if (metric == 0) {
 					vol = simTable->getImportanceTable().at(i); // Importance
@@ -774,17 +776,143 @@ void LineRenderer::display()
 
 		}
 
-
 		// Once all lines have been addded, the queue is sorted based on some metric
-		// TODO
+
 		m_AudioPlayer.sortQueue(0);
 		m_AudioPlayer.startQueue();
 
 	}
 
+	if (viewer()->m_foldButton.pressed && !viewer()->m_foldButton.hold) {
+		viewer()->m_foldButton.holding();
+
+		m_AudioPlayer.stopQueue();
+		m_AudioPlayer.resetQueue();
+
+		SimTable* simTable = renderingStrategy->getSimTable();
+
+		struct DistDegPair
+		{
+			int id;
+			float dist;
+			int deg;
+			DistDegPair(int id, float d, int deg) : id{ id }, dist { d }, deg{ deg } {};
+		};
+
+		std::vector<std::vector<DistDegPair>> minDist(10);
+
+		for (int i = 0; i < numberOfTrajectories; i++) {
+			vec4 segInfo;
+			m_lensBuffer->getSubData(i * sizeof(vec4), sizeof(vec4), &segInfo);
+			// Within the lens
+			if (float(segInfo.a) > 0) {
+
+				const float radians = acos(dot(vec2(float(segInfo.y), float(segInfo.z)), vec2(0.0, -1.0)));
+				const int degrees = int(round(radians * (180.0 / glm::pi<float>())));
+				const float dist = float(segInfo.a);
+
+				/// /// 				globjects::debug() << dist << std::endl;
+
+				float vol = 0.0;
+				if (metric == 0) {
+					vol = simTable->getImportanceTable().at(i); // Importance
+				}
+				else if (metric == 1) {
+					vol = simTable->get(m_uiRenderer.focusLineID, i, m_uiRenderer.selectionRange);
+				}
+
+				int step = int(ceil(vol * 10) - 1);
+				if (step == -1) step = 0;
+
+				if (m_uiRenderer.enableLensDepth) {
+					if (vol > m_uiRenderer.lensDepthValue) {
+						minDist[step].push_back(DistDegPair(int(segInfo.x), dist, degrees));
+					}
+				}
+				else {
+					minDist[step].push_back(DistDegPair(int(segInfo.x), dist, degrees));
+				}
+
+
+			}
+
+		}
+
+		for (int layer = 0; layer < minDist.size(); layer++) {
+			if (minDist[layer].empty()) {
+				m_AudioPlayer.addMuteNote();
+			}
+			else {
+				auto minPair = std::min_element(minDist[layer].begin(), minDist[layer].end(),
+					[](DistDegPair const& lhs, DistDegPair const& rhs) { return lhs.dist > rhs.dist; });
+				float const layerAmp = float((layer + 1) / 10);
+				DistDegPair minElm = minDist[layer][std::distance(minDist[layer].begin(), minPair)];
+
+				m_AudioPlayer.addNoteToQueue(minElm.id, layerAmp, minElm.deg);
+			
+			}
+		}
+
+
+		m_AudioPlayer.sortQueue(0);
+		m_AudioPlayer.startQueue();
+	}	
+
+
+	if ((viewer()->m_pullButton.pressed || viewer()->m_pullButton.hold) && m_pullAudioTimer > m_uiRenderer.Audio()->note_interval) {
+		viewer()->m_pullButton.holding();
+
+		m_AudioPlayer.stopQueue();
+		m_AudioPlayer.resetQueue();
+
+		SimTable* simTable = renderingStrategy->getSimTable();
+		for (int i = 0; i < numberOfTrajectories; i++) {
+			vec4 segInfo;
+			m_lensBuffer->getSubData(i * sizeof(vec4), sizeof(vec4), &segInfo);
+			// Within the lens
+			if (float(segInfo.a) > 0) {
+
+				const float radians = acos(dot(vec2(float(segInfo.y), float(segInfo.z)), vec2(0.0, -1.0)));
+				const int degrees = int(round(radians * (180.0 / glm::pi<float>())));
+				const float dist = float(segInfo.a);
+				const float	vol = simTable->get(m_uiRenderer.focusLineID, i, m_uiRenderer.selectionRange);
+				
+				if (vol > m_uiRenderer.selectionRange) {
+					m_AudioPlayer.addNoteToQueue(i, vol, degrees);
+				}
+
+			}
+
+		}
+
+
+		m_AudioPlayer.startQueue();
+		if (!m_AudioPlayer.isQuePlaying()) {
+			m_pullAudioTimer = 0.0;
+		}
+	}
+	else {
+		m_pullAudioTimer += deltaTime * m_uiRenderer.Animation()->globalAnimationFactor;
+	}
+
 	
+
+	if (viewer()->m_foldButton.hold) {
+		m_uiRenderer.Audio()->note_interval = 0.1;
+		m_AudioPlayer.playQueue(foldDelta);
+	}
+	else if (viewer()->m_pullButton.hold) {
+		m_uiRenderer.Audio()->note_interval = 0.1;
+		m_AudioPlayer.playQueue(pullDelta);
+	} else {
+		m_AudioPlayer.playQueue(deltaTime);
+	}
+
+
+
 	prevPixelX = xPixel;
 	prevPixelY = yPixel;
+	m_prevTime = currTime;
 
 
 	// SSBO --------------------------------------------------------------------------------------------
@@ -845,6 +973,7 @@ void LineRenderer::display()
 
 	// Restore OpenGL state
 	currentState->apply();
+
 }
 
 void LineRenderer::removeNonUnique(std::vector<int>& vec)

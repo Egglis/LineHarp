@@ -43,7 +43,10 @@ flat out vec4 gsEnd;
 flat out vec4 gsNext;
 
 flat out vec2 segDir;
+flat out float segDist;
+
 flat in vec2[2] segDirPreDisplacement;
+flat in float[2] segDistToMouse;
 
 uniform mat4 modelViewProjectionMatrix;
 
@@ -89,6 +92,7 @@ void main() {
 
 
 	segDir = segDirPreDisplacement[0];
+	segDist = segDistToMouse[0];
 
 	spawnPoint(vsOut[0].left, 0);
 	spawnPoint(vsOut[0].right, 0);

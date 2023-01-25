@@ -27,6 +27,7 @@ patch in float t_value;
 uniform float pullTime;
 
 flat out vec2 segDirPreDisplacement;
+flat out float segDistToMouse;
 
 
 // Magic lens
@@ -125,6 +126,8 @@ void main(){
 	float du = 1.0f/totalPoints;
 
 	segDirPreDisplacement = normalize(p2 - p1).xy;
+	vec2 hv = (p2.xy - p1.xy) * 0.5;
+	segDistToMouse = distance(lensPosition, hv);
 
 	//vec3 pcn = calulateInterpolationValues(p1, p2, u);
 	//float t0 = pcn.x;

@@ -22,6 +22,22 @@
 namespace lineweaver
 {
 
+	struct KeyButton
+	{
+		bool pressed = false;
+		bool hold = false;
+
+
+		void press() { pressed = true; };
+
+		void release() { 
+			pressed = false;
+			hold = false;
+		};
+
+		void holding() { hold = true; };
+	};
+
 	class Viewer
 	{
 	public:
@@ -76,11 +92,11 @@ namespace lineweaver
 
 		void setLensDepthValue(float z) { m_lensDepthValue = std::clamp(m_lensDepthValue+z, 0.0f, 1.0f); };
 		float getLensDepthValue() { return m_lensDepthValue; };
-
-		bool foldAnimation() { return m_foldAnimation; };
-		void endFoldAnimation() { m_foldAnimation = false; };
-		bool pullAnimation() { return m_pullAnimation; };
 		bool playAudioQueue() { return m_playAudio; };
+		
+		
+		KeyButton m_foldButton;
+		KeyButton m_pullButton;
 
 	private:
 
@@ -147,8 +163,6 @@ namespace lineweaver
 		bool m_enforceOverplottingComp = false;		// F8
 
 
-		bool m_foldAnimation = false;
-		bool m_pullAnimation = false;
 		bool m_playAudio = false;
 	};
 

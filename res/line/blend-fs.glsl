@@ -33,6 +33,7 @@ struct BufferEntry
 	float importance;
 	vec4 color;
 	vec2 dir;
+	float dist;
 };
 
 layout(std430, binding = 1) buffer intersectionBuffer
@@ -206,7 +207,8 @@ void main()
 			// Fill the segmentTexture with the required information for playing sounds
 			int id = int(intersections[iIndexI].id);
 			vec2 segDir = intersections[iIndexI].dir;
-			segmentInformation = vec4(id, segDir.x, segDir.y, -1);
+			float segDist = intersections[iIndexI].dist;
+			segmentInformation = vec4(id, segDir.x, segDir.y, segDist);
 
 
 			segInfoTexture = segmentInformation;
@@ -216,7 +218,7 @@ void main()
 	
 			if(pxlDistance2 <= lensRadius){
 				linesWithinLens[id] = segmentInformation;
-			} 
+			}
 
 			currentID = id;
 		}

@@ -12,7 +12,7 @@ namespace gam {
 	class PluckedString {
 	public:
 		PluckedString(float frq = 440)
-			: env(0.1), fil(2), delay(1./27.5, 1./frq) {};
+			: env(0.1), fil(3), delay(1./27.5, 1./frq) {};
 
 		
 		float operator()() {
@@ -27,6 +27,7 @@ namespace gam {
 
 		void reset() { env.reset(); };
 		void freq(float v) { delay.freq(v); };
+		bool done() { return env.done(); };
 
 		NoiseWhite<> noise;
 		Decay<> env;

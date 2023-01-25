@@ -1,4 +1,6 @@
 #include "AudioPlayer.h"
+#include <future>
+
 
 // TODO remove
 #include <globjects/globjects.h>
@@ -9,17 +11,28 @@ using namespace gam;
 // Play a note based on value = volume, angle = freq
 void AudioPlayer::playNote(float value, int angle) {
 
+
+	while (blockNoteChanging) {
+		// Wait for note playing to finish
+	};
 	mAudioOn = true;
 
+
+
+	// Then block the note playing thread
+	blockThread = true;
 	Note* noteX = mNotes.at(mCurrentString);
 
 	noteX->setMinimumAmp(m_ui->Audio()->minAmp);
 	noteX->amp(value);
 	noteX->angFreq(angle);
 	noteX->reset();
+	blockThread = false;
 
 	mCurrentString += 1;
 	if (mCurrentString > 5) mCurrentString = 0;
+
+
 }
 
 void AudioPlayer::addNoteToQueue(int id, float amp, int angle)
@@ -28,6 +41,10 @@ void AudioPlayer::addNoteToQueue(int id, float amp, int angle)
 	mQueue.push_back(q);
 }
 
+void AudioPlayer::addMuteNote() {
+	QueNote q(-2, -1, -1);
+	mQueue.push_back(q);
+}
 
 
 // Ensures that the queue is played
@@ -40,9 +57,13 @@ void AudioPlayer::playQueue(float deltaTime)
 		if (intervalTimer > m_ui->Audio()->note_interval) {
 			if (index < mQueue.size()) {
 				const QueNote* qn = &mQueue.at(index);
-				playNote(qn->amp, qn->angle);
 
-				m_ui->setFocusId(qn->id);
+				if (qn->id != -2) {
+					playNote(qn->amp, qn->angle);
+				};
+
+				// Debugging 
+				// m_ui->setFocusId(qn->id);
 				index += 1;
 			}
 			else {
@@ -55,6 +76,12 @@ void AudioPlayer::playQueue(float deltaTime)
 	}
 }
 
+
+
+void AudioPlayer::addToSound(float pluck) {
+	ms += pluck;
+}
+
 void AudioPlayer::onAudio(AudioIOData& io)
 {
 	while (io()) {
@@ -62,28 +89,37 @@ void AudioPlayer::onAudio(AudioIOData& io)
 		// toggle on/off audio
 		if (!mAudioOn) continue;
 
-
-		// A beat or period has passed...
-		if (tmr()) {
-			// Does nothing yet
-
+		// If main thread is writing to mNotes then block this thread!
+		if (blockThread) {
+			continue;
 		}
+		// Block the ability to write to mNotes when values are read
+		blockNoteChanging = true;
 
+
+		// The sound of all 6 Strings/Notes are summed 
 		float s = 0;
-		for (Note* note : mNotes) {
+		for (auto &note : mNotes) {
 			s += note->pluck();
 		}
 
-		// Sterio sound
 		io.out(0) = io.out(1) = s * m_ui->Audio()->volume;
+
+
+		// Unblock 
+		blockNoteChanging = false;
 	}
 }
 
 void AudioPlayer::resetAllStrings()
 {
-	for (Note* note : mNotes) {
+	// Block the ability to write to mNotes when values are read
+	blockThread = true;
+	for (auto& note : mNotes) {
 		note->mute();
 		note->reset();
 	}
+	// Unblock 
+	blockThread = false;
 
 }
