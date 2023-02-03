@@ -27,7 +27,7 @@ namespace gam {
 
 		void reset() { env.reset(); };
 		void freq(float v) { delay.freq(v); };
-		bool done() { return env.done(); };
+		bool done() { return fil.reachedEnd(); };
 
 		NoiseWhite<> noise;
 		Decay<> env;

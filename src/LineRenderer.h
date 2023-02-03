@@ -30,6 +30,24 @@
 
 namespace lineweaver
 {
+	struct SubData
+	{
+		SubData(int i, int d, float dst) : id{ i }, degree{ d }, dist{ dst } {};
+		int id;
+		int degree;
+		float dist;
+	};
+
+	enum AudioMode {
+		NONE,
+		FOLD,
+		FOLD_RELEASE,
+		PULL,
+		GLOBAL,
+		MOUSE
+	};
+
+
 	class Viewer;
 
 	class LineRenderer : public Renderer
@@ -39,7 +57,7 @@ namespace lineweaver
 		virtual void display();
 	private:
 		void removeNonUnique(std::vector<int>& vec);
-
+		SubData getSubDataFromLensBuffer(int offset);
 
 		LinkedListRendering* renderingStrategy = NULL;
 
@@ -114,6 +132,9 @@ namespace lineweaver
 		// Audio
 		gam::AudioPlayer m_AudioPlayer;
 		float audioTimer = 0.0f;
+		AudioMode mAudioMode = NONE;
+		int mGlobalAudioIndex = 0;
+
 
 		int prevPixelX = 0;
 		int prevPixelY = 0;
@@ -122,6 +143,8 @@ namespace lineweaver
 		bool m_foldButtonHold = false;
 		bool m_reverseQue = false;
 		float m_pullAudioTimer = 0.0f;
+
+		bool m_lensDepthChangingHold = false;
 		// ------------------------------------------------------------------------------------------
 	};
 

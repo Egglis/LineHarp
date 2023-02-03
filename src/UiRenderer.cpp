@@ -11,7 +11,7 @@ UiRenderer::UiRenderer() {
 
 void UiRenderer::setFocusId(int id)
 {
-	focusLineID = id;
+	m_selectionSettings.focusLineId = id;
 }
 
 bool UiRenderer::dataFileGUI() {	
@@ -83,16 +83,16 @@ void UiRenderer::linePropretiesGUI() {
 void lineweaver::UiRenderer::selectionGUI(Viewer* viewer)
 {
 	if(ImGui::CollapsingHeader("Selection Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::Checkbox("Enable Focus-Line", &enableFocusLine);
-		ImGui::SliderInt("Focus-Line", &focusLineID, 0, viewer->scene()->tableData()->m_numberOfTrajectories - 1);
+		ImGui::Checkbox("Enable Focus-Line", &m_selectionSettings.enableFocusLine);
+		ImGui::SliderInt("Focus-Line", &m_selectionSettings.focusLineId, 0, viewer->scene()->tableData()->m_numberOfTrajectories - 1);
 
 		
 
-		ImGui::Combo("Selection Mode", &selectionMode, "Single\0Importance\0Mid Point\0Min Dist\0Hausdorff Dist\0Frechet Dist");
-		if(selectionMode != 0) {
-			ImGui::SliderFloat("Selection Range", &selectionRange, 0.0f, 1.0f);
+		ImGui::Combo("Selection Mode", &m_selectionSettings.selectionMode, "Single\0Importance\0Mid Point\0Min Dist\0Hausdorff Dist\0Frechet Dist");
+		if(m_selectionSettings.selectionMode != 0) {
+			ImGui::SliderFloat("Selection Range", &m_selectionSettings.selectionRange, 0.0f, 1.0f);
 		}
-		ImGui::Checkbox("Pull Background", &pullBackgorund);
+		ImGui::Checkbox("Pull Background", &m_selectionSettings.enablePullBackground);
 	}
 
 }
@@ -100,35 +100,35 @@ void lineweaver::UiRenderer::selectionGUI(Viewer* viewer)
 void UiRenderer::lensSettingsGUI(Viewer* viewer) {
 	if (ImGui::CollapsingHeader("Lens Feature", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::SliderFloat("Lens Radius", &lensRadius, 0.0f, 1.0f);
+		ImGui::SliderFloat("Lens Radius", &m_lensSettings.lensRadius, 0.0f, 1.0f);
 
-		ImGui::Checkbox("Enable Focus-Lens", &enableLens);
-		ImGui::Checkbox("Enable Angular-Brushing", &enableAngularBrush);
-		ImGui::Checkbox("Enable Lens Depth", &enableLensDepth);
+		ImGui::Checkbox("Enable Focus-Lens", &m_lensSettings.enableLens);
+		ImGui::Checkbox("Enable Angular-Brushing", &m_lensSettings.enableAngularBrush);
+		ImGui::Checkbox("Enable Lens Depth", &m_lensSettings.enableLensDepth);
 
-		if (enableLensDepth) {
+		if (m_lensSettings.enableLensDepth) {
 			ImGui::SliderFloat("Lens Depth", &viewer->m_lensDepthValue, 0.0f, 1.0f);
-			ImGui::SliderFloat("Lend Depth Scaling", &lensDepthScaling, 0.0f, 1.0f);
-			lensDepthValue = viewer->getLensDepthValue();
+			ImGui::SliderFloat("Lend Depth Scaling", &m_lensSettings.lensDepthScaling, 0.0f, 1.0f);
+			m_lensSettings.lensDepthValue = viewer->getLensDepthValue();
 		}
 
 
-		ImGui::SliderFloat("Lens Displacment ", &lensDisp, 0.0f, 1.0f);
+		ImGui::SliderFloat("Lens Displacment ", &m_lensSettings.lensDisp, 0.0f, 1.0f);
 
 		// If angual brushing then scroll wheel on angular brushing is prioratized
-		if (!enableAngularBrush) {
+		if (!m_lensSettings.enableAngularBrush) {
 
 			// Convert angle into 0 -> 1 range
 			const float oldRange = (90.0f - (-90.0f));
 			const float newRange = (1.0f - 0.0f);
 			float newValue = ((viewer->m_scrollWheelAngle - (-90)) * newRange) / oldRange;
-			lensDisp = newValue;
+			m_lensSettings.lensDisp = newValue;
 		}
 
-		ImGui::SliderFloat("Brushing Angle", &brushingAngle, -90.0f, 90.0f);
+		ImGui::SliderFloat("Brushing Angle", &m_lensSettings.brushingAngle, -90.0f, 90.0f);
 
-		if (enableAngularBrush) {
-			brushingAngle = viewer->m_scrollWheelAngle;
+		if (m_lensSettings.enableAngularBrush) {
+			m_lensSettings.brushingAngle = viewer->m_scrollWheelAngle;
 		}
 
 	}
@@ -172,49 +172,55 @@ void UiRenderer::animationSettingsGUI() {
 void UiRenderer::audioSettingsGUI() {
 	if (ImGui::BeginMenu("Audio")) {
 		ImGui::SliderFloat("Interval between each note:", &m_audioSettings.note_interval, 0.0, 1.0);
-		ImGui::SliderFloat("Note Volume", &m_audioSettings.volume, 0.0, 1.0);
+		ImGui::SliderFloat("Global volume", &m_audioSettings.volume, 0.0, 1.0);
 		ImGui::SliderFloat("Lowest possible amplitude:", &m_audioSettings.minAmp, 0.0, 1.0);
-		/*
-		// Set up the Note Range
-		const int min = 0;
-		const int max = m_noteMap->getNotes()->size() - 1;
-		const Note minNote = m_noteMap->getNoteFromIndex(m_audioSettings.min_note);
-		const Note maxNote = m_noteMap->getNoteFromIndex(m_audioSettings.max_note);
 
-		std::ostringstream minS;
-		std::ostringstream maxS;
-		minS << std::fixed << std::setprecision(2) << minNote.frequency;
-		maxS << std::fixed << std::setprecision(2) << maxNote.frequency;
-
-		const std::string minFormat = minNote.name + " - " + minS.str() + "hz";
-		const std::string maxFormat = maxNote.name + " - " + maxS.str() + "hz";
-
-		ImGui::DragIntRange2("Note Range", &m_audioSettings.min_note, &m_audioSettings.max_note,
-			1, min, max,
-			minFormat.c_str(), maxFormat.c_str());
-
-		m_noteMap->min_freq_index = m_audioSettings.min_note;
-		m_noteMap->max_freq_index = m_audioSettings.max_note;
-		*/
 		m_audioSettings.reset = ImGui::Button("Reset Audio Player");
 		
 			
 		ImGui::Spacing();
 
 		ImGui::Checkbox("Play Notes When Clicking", &m_audioSettings.enableNotesWhileClicking);
+		ImGui::Checkbox("Visual Audio Guide, (Will break pull audio)", &m_audioSettings.enableVisualGuide);
 		ImGui::Combo("Audio Frequency Metric", &m_audioSettings.metric, "Importance\0Distance");
 		
 		m_audioSettings.mute = m_audioSettings.volume <= 0.0f;
 
-
+		ImGui::Spacing();
+		ImGui::Text("Current Audio Device: ");
+		ImGui::SameLine();
+		ImGui::Text(m_audioSettings.defaultDevice.c_str());
+		
 		ImGui::EndMenu();
 	}
 
 }
 
-// TODO
 void lineweaver::UiRenderer::keybindingsInfoGUI()
 {
+	if (ImGui::BeginMenu("Info & Keybindings")) {
+
+		ImGui::Text("Displacment:");
+		ImGui::Text("Mouse Scroll Wheel - Lens Displacment / Angular brush angle");
+		ImGui::Text("Shift + Left Mouse - Change lens depth when enabled");
+
+		ImGui::Spacing();
+
+		ImGui::Text("Lens:");
+		ImGui::Text("F - Fold animation / Close the displacment of the lens");
+		ImGui::Text("P - Pull animation / Pull out the selected lines");
+
+		ImGui::Spacing();
+
+		ImGui::Text("Audio:");
+		ImGui::Text("F - Play 10 closest lines for each importance layer");
+		ImGui::Text("P - Play audio for selected lines when they are within the lens");
+		ImGui::Text("G - Play every line within the the lens in importance order");
+
+		ImGui::EndMenu();
+
+	}
+
 }
 
 
@@ -229,7 +235,7 @@ std::string UiRenderer::generateDefines() {
 	else if (m_lineSettings.coloringMode == 3)
 		defines += "#define RANDOM_LINE_COLORS\n";
 
-	if (enableFocusLine)
+	if (m_selectionSettings.enableFocusLine)
 		defines += "#define FOCUS_LINE\n";
 
 	if (m_lineSettings.enableLineHalos)
@@ -242,19 +248,19 @@ std::string UiRenderer::generateDefines() {
 	if (calculateOverplottingIndex)
 		defines += "#define CALCULATE_OVERPLOTTING_INDEX\n";
 
-	if (enableLens)
+	if (m_lensSettings.enableLens)
 		defines += "#define LENS_FEATURE\n";
 
-	if (enableAngularBrush)
+	if (m_lensSettings.enableAngularBrush)
 		defines += "#define ANGULAR_BRUSHING\n";
 
-	if (enableLensDepth)
+	if (m_lensSettings.enableLensDepth)
 		defines += "#define LENS_DEPTH\n";
 
-	if (pullBackgorund)
+	if (m_selectionSettings.enablePullBackground)
 		defines += "#define PULL_BACKGROUND\n";
 
-	if (binaryLensDepth)
+	if (m_lensSettings.enableBinaryLensDepth)
 		defines += "#define BINARY_LENS_DEPTH\n";
 
 	if (easeFunctionID == 0)

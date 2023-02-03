@@ -28,17 +28,20 @@ namespace Settings {
 		int min_note = 0;
 		int max_note = 71;
 
-		float note_interval = 0.2f;
+		float note_interval = 0.1f;
 		float volume = 0.2f;
 
 		bool mute = false;
 		bool enableNotesWhileClicking = true;
+		bool enableVisualGuide = false;
 		bool reset = false;
 
 
 		int metric = 0;
 		
 		float minAmp = 0.2;
+
+		std::string defaultDevice = "None";
 	};
 
 	struct File {
@@ -62,18 +65,35 @@ namespace Settings {
 
 	struct Selection
 	{
-		// TODO
-		bool TODO = true;
-	};
-	struct Lens {
-		// TODO
-		bool TODO = true;
-	};
-	struct OverPlotting {
-		//TODO
-		bool TODO = true;
+		bool enableFocusLine = false;
+		int focusLineId = 0;
+
+		int selectionMode = 0; // 0-SingleSelection, 1-Importance, 2-Similarity, 3-Distance
+		float selectionRange = 0.1f;
+
+		bool enablePullBackground = false;
 	};
 
+	struct Lens {
+		bool enableLens = false;
+		float lensRadius = 0.15f;
+
+		glm::vec2 lensPos = glm::vec2(0, 0);
+		glm::vec2 delayedLensPos = glm::vec2(0, 0);
+
+		bool enableAngularBrush = false;
+
+		// Lens Displacment
+		float lensDisp = 0.0f;
+		float brushingAngle = 0.0f;
+
+		// Lens Depth settings
+		bool enableLensDepth = false;
+		bool enableBinaryLensDepth = false;
+		float lensDepthValue = 1.0f;
+		float lensDepthScaling = 0.5f;
+
+	};
 }
 
 
@@ -112,25 +132,17 @@ namespace lineweaver
 		Settings::Line* Line() { return &m_lineSettings; };
 
 		void selectionGUI(Viewer* viewer);
+		Settings::Selection* Selection() { return &m_selectionSettings; };
+
 		void lensSettingsGUI(Viewer* viewer);
+		Settings::Lens* Lens() { return &m_lensSettings; };
+
 		void overplottingMeasurmentGUI(Viewer* viewer);
-
-
 
 		// Generates the defines.glsl file
 		std::string generateDefines();
 
 		// GUI variables ----------------------------------------------------------------------------
-
-		
-		// allow highlighting a single trajectory
-		bool enableFocusLine = false;
-		int focusLineID = 0;
-
-		// Selection:
-		int selectionMode = 0; // 0-SingleSelection, 1-Importance, 2-Similarity, 3-Distance
-		float selectionRange = 0.1f;
-		bool pullBackgorund = false;
 
 		// provide modulation of importance
 		int easeFunctionID = 0;
@@ -139,28 +151,11 @@ namespace lineweaver
 		bool calculateOverplottingIndex = false;
 		bool displayOverplottingGUI = false;
 
-		// support focus lense feature
-		bool enableLens = false;
-		float lensRadius = 0.15f;
-
-		glm::vec2 lensPosition = glm::vec2(0, 0);
-		glm::vec2 delayedLensPosition = glm::vec2(0, 0);
-
-		// support for angular brush
-		bool enableAngularBrush = false;
-		float lensDisp = 0.0f;
-		float brushingAngle = 0.0f;
-
 		// Overplotting
 		std::vector<unsigned int> totalPixelsPerTrajectory;
 		std::vector<unsigned int> visiblePixelsPerTrajectory;
 		double overplottingRatio = 0.0;
 
-		// Lens Depth Mode
-		float lensDepthValue = 1.0f;
-		float lensDepthScaling = 0.5f;
-		bool enableLensDepth = false;
-		bool binaryLensDepth = false;
 
 		bool dispAction = false;
 
@@ -170,6 +165,8 @@ namespace lineweaver
 		Settings::File m_fileSettings;
 		Settings::Scaling m_scalingSettings;
 		Settings::Line m_lineSettings;
+		Settings::Selection m_selectionSettings;
+		Settings::Lens m_lensSettings;
 
 		//gam::NoteMap* m_noteMap;
 	};

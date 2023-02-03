@@ -18,7 +18,7 @@ namespace gam {
 
 		void initAudio(
 			double framesPerSec, unsigned framesPerBuffer = 128,
-			unsigned outChans = 2, unsigned inChans = 2
+			unsigned outChans = 1, unsigned inChans = 0
 		) {
 			mAudioIO.framesPerSecond(framesPerSec);
 			mAudioIO.framesPerBuffer(framesPerBuffer);
