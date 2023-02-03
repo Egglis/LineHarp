@@ -856,7 +856,7 @@ void LineRenderer::display()
 		m_AudioPlayer.startQueue();
 	}
 	
-	globjects::debug() << mAudioMode << std::endl;
+	// globjects::debug() << mAudioMode << std::endl;
 	
 	if (mAudioMode == MOUSE) {
 		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
@@ -871,7 +871,7 @@ void LineRenderer::display()
 	}
 	else if (mAudioMode == FOLD || mAudioMode == FOLD_RELEASE) {
 		const int tIndex = m_AudioPlayer.queSize() - (int)(m_foldTimer * m_AudioPlayer.queSize() + 0.5);
-		globjects::debug() << tIndex << std::endl;
+		// globjects::debug() << tIndex << std::endl;
 		m_AudioPlayer.playInternalQueue(deltaTime, tIndex);
 
 		if (m_foldTimer == 0.0) {

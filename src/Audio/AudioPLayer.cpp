@@ -94,7 +94,7 @@ void AudioPlayer::playFoldQueue(float foldDelta, float foldTimer, int indexOverr
 				index = indexOverride;
 			}
 
-			globjects::debug() << index << std::endl;
+			//globjects::debug() << index << std::endl;
 
 			if (index >= 0 && index < mQueue.size()) {
 
