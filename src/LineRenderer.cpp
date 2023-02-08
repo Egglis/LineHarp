@@ -350,7 +350,7 @@ void LineRenderer::display()
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	if (!viewer()->m_lensDepthChanging) {
+	if (!viewer()->m_lensDepthChanging && mAudioMode != GLOBAL && !viewer()->m_lensRadiusChanging) {
 		double mouseX, mouseY;
 		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
 
@@ -541,7 +541,7 @@ void LineRenderer::display()
 	programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
 	programLine->setUniform("delayedTValue", t);
 
-
+	m_uiRenderer.Lens()->lensRadius = viewer()->m_lensRadiusValue;
 	programLine->setUniform("lensRadius", m_uiRenderer.Lens()->lensRadius);
 	programLine->setUniform("viewMatrix", viewMatrix);
 	programLine->setUniform("inverseViewMatrix", inverseViewMatrix);
@@ -722,14 +722,26 @@ void LineRenderer::display()
 
 	glReadBuffer(GL_NONE);
 
+	// Check for any key presses
+	bool readSubData = false;
+	AudioMode mode = NONE;
+
+	// TODO make the syntax consisitant
+	if (viewer()->playAudioQueue()) mode = GLOBAL;
+	else if (viewer()->m_pullButton.pressed) mode = PULL;
+	else if (viewer()->m_lensDepthChanging) mode = DRAG;
+	else if (viewer()->m_lensRadiusChanging) mode = RADIUS;
+
+	globjects::debug() << viewer()->m_lensRadiusChanging << std::endl;
+	// Set the current playing mode!
+
 	int metric = m_uiRenderer.Audio()->metric;
 	if (id >= 0 
 		&& id <= numberOfTrajectories
 		&& degrees < 181
-		&& mAudioMode == NONE
-		&& !m_AudioPlayer.isQuePlaying()
-		&& !viewer()->m_foldButton.hold && !viewer()->m_pullButton.hold
-		&& !viewer()->m_lensDepthChanging) {
+		&& mode == NONE
+		&& !viewer()->m_lensDepthChanging
+		&& !viewer()->m_lensRadiusChanging) {
 		if (viewer()->m_mousePressed[0] && prevID != id ) {
 			m_uiRenderer.setFocusId(id);
 		}
@@ -753,10 +765,48 @@ void LineRenderer::display()
 			audioTimer = 0.0f;
 
 		}
+	
+	}
 
+
+	if(mode != NONE && mode != mPrevFrameAudioMode && mode != RADIUS|| mode == PULL){
+		SimTable* simTable = renderingStrategy->getSimTable();
+		std::vector<std::pair<float, int>> tmpLines;
+		for (int i = 0; i < numberOfTrajectories; i++) {
+
+			SubData subData = getSubDataFromLensBuffer(i);
+
+			// Within the lens
+			if (subData.dist > 0) {
+
+				float vol = 0.0f;
+				if (mode == GLOBAL || mode == DRAG) {
+					vol = simTable->getImportanceTable().at(i); // Importance
+					tmpLines.push_back(std::make_pair(vol, subData.degree));
+				}
+				else if (mode == PULL) {
+					vol = simTable->get(m_uiRenderer.Selection()->focusLineId, i, m_uiRenderer.Selection()->selectionRange);
+					if (vol > 0) {
+						tmpLines.push_back(std::make_pair(vol, subData.degree));
+					}
+				}
+				
+					
+			}
+		}
+		m_AudioPlayer.setAvailableNotes(tmpLines, 1);
+		// TODO pass a condition which needs to met in order to play the "next" note
 
 	}
 
+	// Continues this frame within the audio object!
+	m_AudioPlayer.mainThread(deltaTime, mode);
+	mPrevFrameAudioMode = mode;
+
+
+		// Once all lines have been addded, the queue is sorted based on importance
+		//m_AudioPlayer.sortQueue(0);
+		//m_AudioPlayer.startQueue();
 
 	// Check if any audio conition is true
 	// Set the necassarey bools
@@ -766,7 +816,7 @@ void LineRenderer::display()
 	// Reset bools
 	
 
-
+	/*
 	bool playAudio = false;
 
 	// Shift + LM - 
@@ -780,7 +830,7 @@ void LineRenderer::display()
 	}
 	else if (!viewer()->m_lensDepthChanging) {
 		m_lensDepthChangingHold = false;
-		m_AudioPlayer.stopQueue();
+		//m_AudioPlayer.stopQueue();
 	}
 
 	// G - Keybinding - 
@@ -789,17 +839,6 @@ void LineRenderer::display()
 		mAudioMode = GLOBAL;
 	}
 
-	if (viewer()->m_foldButton.pressed) {
-		playAudio = true;
-		mAudioMode = FOLD;
-	}
-	else if(mAudioMode == FOLD) {
-		playAudio = true;
-		mAudioMode = FOLD_RELEASE;
-	}
-	else if (mAudioMode == FOLD_RELEASE) {
-		playAudio = true;
-	}
 
 	/*
 	if (viewer()->m_pullButton.pressed && m_pullAudioTimer > m_uiRenderer.Audio()->note_interval) {
@@ -812,12 +851,12 @@ void LineRenderer::display()
 	} else {
 		m_pullAudioTimer += deltaTime * m_uiRenderer.Animation()->globalAnimationFactor;
 	}
-	*/
+
 
 
 	// Main Lens Audio Player!
 	if (playAudio) {
-		m_AudioPlayer.resetQueue();
+		//m_AudioPlayer.resetQueue();
 
 		SimTable* simTable = renderingStrategy->getSimTable();
 
@@ -839,11 +878,11 @@ void LineRenderer::display()
 				if (mAudioMode == PULL) {
 					vol = simTable->get(m_uiRenderer.Selection()->focusLineId, i, m_uiRenderer.Selection()->selectionRange);
 					if (vol > m_uiRenderer.Selection()->selectionRange) {
-						m_AudioPlayer.addNoteToQueue(i, vol, subData.degree);
+						//m_AudioPlayer.addNoteToQueue(i, vol, subData.degree);
 					}
 				}
 				else {
-					m_AudioPlayer.addNoteToQueue(i, vol, subData.degree);
+					//m_AudioPlayer.addNoteToQueue(i, vol, subData.degree);
 
 				}
 
@@ -852,12 +891,12 @@ void LineRenderer::display()
 		}
 
 		// Once all lines have been addded, the queue is sorted based on importance
-		m_AudioPlayer.sortQueue(0);
-		m_AudioPlayer.startQueue();
+		//m_AudioPlayer.sortQueue(0);
+		//m_AudioPlayer.startQueue();
 	}
-	
+	*/
 	// globjects::debug() << mAudioMode << std::endl;
-	
+	/*
 	if (mAudioMode == MOUSE) {
 		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
 		m_AudioPlayer.playInternalQueue(deltaTime, tIndex);
@@ -869,16 +908,7 @@ void LineRenderer::display()
 		}
 
 	}
-	else if (mAudioMode == FOLD || mAudioMode == FOLD_RELEASE) {
-		const int tIndex = m_AudioPlayer.queSize() - (int)(m_foldTimer * m_AudioPlayer.queSize() + 0.5);
-		// globjects::debug() << tIndex << std::endl;
-		m_AudioPlayer.playInternalQueue(deltaTime, tIndex);
 
-		if (m_foldTimer == 0.0) {
-			m_AudioPlayer.stopQueue();
-			mAudioMode = NONE;
-		}
-	}
 	else if (mAudioMode == GLOBAL) {
 		m_AudioPlayer.startQueue();
 		m_AudioPlayer.playInternalQueue(deltaTime);
@@ -892,7 +922,7 @@ void LineRenderer::display()
 		m_AudioPlayer.startQueue();
 		m_AudioPlayer.playInternalQueue(deltaTime);
 	}
-	*/
+
 	// Pull Audio
 	
 	if ((viewer()->m_pullButton.pressed || viewer()->m_pullButton.hold) && m_pullAudioTimer > m_uiRenderer.Audio()->note_interval) {
@@ -925,7 +955,7 @@ void LineRenderer::display()
 	else {
 		m_pullAudioTimer += deltaTime * m_uiRenderer.Animation()->globalAnimationFactor;
 	}
-
+	*/
 	
 	// Play the correct queue and timing
 /*
@@ -933,11 +963,11 @@ void LineRenderer::display()
 		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
 		m_AudioPlayer.playFoldQueue(foldDelta, m_foldTimer, tIndex);
 	}
-	*/
+
 	if (viewer()->m_pullButton.hold) {
 		m_AudioPlayer.playQueue(pullDelta);
 	}
-	/*
+
 	else if (m_lensDepthChangingHold) {
 		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
 		m_AudioPlayer.playFoldQueue(foldDelta, m_foldTimer, tIndex);

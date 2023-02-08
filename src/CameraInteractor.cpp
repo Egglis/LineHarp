@@ -119,6 +119,9 @@ void CameraInteractor::mouseButtonEvent(int button, int action, int mods)
 		if (mods == GLFW_MOD_SHIFT) {
 			m_lensDepth = true;
 		}
+		else if (mods == GLFW_MOD_CONTROL) {
+			m_lensRadius = true;
+		}
 		m_xPrevious = m_xCurrent;
 		m_yPrevious = m_yCurrent;
 	}
@@ -140,7 +143,9 @@ void CameraInteractor::mouseButtonEvent(int button, int action, int mods)
 		m_scaling = false;
 		m_panning = false;
 		m_lensDepth = false;
+		m_lensRadius = false;
 		viewer()->m_lensDepthChanging = false;
+		viewer()->m_lensRadiusChanging = false;
 
 	}
 }
@@ -188,6 +193,31 @@ void CameraInteractor::cursorPosEvent(double xpos, double ypos)
 		}
 	}
 
+	if (m_lensRadius) {
+		if (m_xCurrent != m_xPrevious || m_yCurrent != m_yPrevious)
+		{
+			viewer()->m_lensRadiusChanging = true;
+			ivec2 viewportSize = viewer()->viewportSize();
+			vec2 va = vec2(2.0f * float(m_xPrevious) / float(viewportSize.x) - 1.0f, -2.0f * float(m_yPrevious) / float(viewportSize.y) + 1.0f);
+			vec2 vb = vec2(2.0f * float(m_xCurrent) / float(viewportSize.x) - 1.0f, -2.0f * float(m_yCurrent) / float(viewportSize.y) + 1.0f);
+			vec2 d = vb - va;
+
+			float l = std::abs(d.x) > std::abs(d.y) ? d.x : d.y;
+			float s = 0.0f;
+
+			if (l > 0.0f)
+			{
+				s += std::min(0.5f, length(d));
+				viewer()->setLensRadiusValue(s);
+			}
+			else
+			{
+				s -= std::min(0.5f, length(d));
+				viewer()->setLensRadiusValue(s);
+			}
+
+		}
+	}
 
 	if (m_scaling)
 	{

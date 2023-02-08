@@ -3,18 +3,13 @@
 
 using namespace gam;
 
-#include "FreqMap.h"
 
 
-Note::Note(float freq, float amp) : m_freq{ freq }, m_amp{ amp }
+Note::Note(float freq, float amp) : mFreq{ freq }, mAmp{ amp }
 {
-    m_name = FreqMap::getNameFromFreq(freq);
-
+	mString.freq(freq);
 }
 
-void Note::angFreq(int ang)
-{
-    freq(FreqMap::mapAngleToNote(ang));
-}
+
 
 

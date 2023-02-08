@@ -40,14 +40,15 @@ namespace lineweaver
 
 	enum AudioMode {
 		NONE,
-		FOLD,
-		FOLD_RELEASE,
+		HOVER,
 		PULL,
+		DRAG,
 		GLOBAL,
-		MOUSE
+		RADIUS
 	};
 
 
+	enum AudioMode;
 	class Viewer;
 
 	class LineRenderer : public Renderer
@@ -145,6 +146,8 @@ namespace lineweaver
 		float m_pullAudioTimer = 0.0f;
 
 		bool m_lensDepthChangingHold = false;
+
+		AudioMode mPrevFrameAudioMode = NONE;
 		// ------------------------------------------------------------------------------------------
 	};
 

@@ -24,6 +24,7 @@ namespace gam {
 			mAudioIO.framesPerBuffer(framesPerBuffer);
 			mAudioIO.channelsOut(outChans);
 			mAudioIO.channelsIn(inChans);
+			mAudioIO.clipOut(false);
 			sampleRate(framesPerSec);
 		}
 

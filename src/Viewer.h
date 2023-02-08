@@ -67,7 +67,9 @@ namespace lineweaver
 		float m_scrollWheelAngle = 0.0f;
 		float m_lineChartDiameter = 2.0f*sqrt(3.0f);
 		float m_lensDepthValue = 1.0f;
+		float m_lensRadiusValue = 0.5f;
 		bool m_lensDepthChanging = false;
+		bool m_lensRadiusChanging = false;
 		bool m_mousePressed[3] = { false, false, false };
 
 
@@ -91,6 +93,9 @@ namespace lineweaver
 		bool enforcedOverplottingComp();
 
 		void setLensDepthValue(float z) { m_lensDepthValue = std::clamp(m_lensDepthValue+z, 0.0f, 1.0f); };
+		void setLensRadiusValue(float z) { m_lensRadiusValue = std::clamp(m_lensRadiusValue+z, 0.0f, 1.0f); };
+
+
 		float getLensDepthValue() { return m_lensDepthValue; };
 		bool playAudioQueue() { return m_playAudio; };
 		

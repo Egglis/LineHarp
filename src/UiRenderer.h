@@ -88,10 +88,10 @@ namespace Settings {
 		float brushingAngle = 0.0f;
 
 		// Lens Depth settings
-		bool enableLensDepth = false;
+		bool enableLensDepth = true;
 		bool enableBinaryLensDepth = false;
 		float lensDepthValue = 1.0f;
-		float lensDepthScaling = 0.5f;
+		float lensDepthScaling = 0.2f;
 
 	};
 }

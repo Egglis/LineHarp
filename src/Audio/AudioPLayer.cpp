@@ -1,5 +1,5 @@
 #include "AudioPlayer.h"
-#include <future>
+#include "FreqMap.h"
 
 
 // TODO remove
@@ -8,166 +8,11 @@
 
 using namespace gam;
 
-// Play a note based on value = volume, angle = freq
-void AudioPlayer::playNote(float value, int angle) {
-
-
-	while (blockNoteChanging) { /* Wait for audio thread to finish */ };
-	mAudioOn = true;
-
-
-
-	// Then block the note playing thread
-	blockThread = true;
-	Note* noteX = mNotes.at(mCurrentString);
-
-	noteX->setMinimumAmp(m_ui->Audio()->minAmp);
-	noteX->amp(value);
-	noteX->angFreq(angle);
-	noteX->reset();
-	blockThread = false;
-
-	mCurrentString += 1;
-	if (mCurrentString > NR_UNIQUE_NOTES-1) mCurrentString = 0;
-
-}
-
-void AudioPlayer::addNoteToQueue(int id, float amp, int angle)
-{
-	QueNote q(id, amp, angle);
-	mQueue.push_back(q);
-}
-
-void AudioPlayer::addMuteNote() {
-	QueNote q(-2, -1, -1);
-	mQueue.push_back(q);
-}
-
-
-// Ensures that the queue is played
-void AudioPlayer::playQueue(float deltaTime)
-{	
-	if (playQue) {
-		intervalTimer += deltaTime;
-
-		// Play next note:
-		if (intervalTimer > m_ui->Audio()->note_interval) {
-			if (m_index < mQueue.size()) {
-
-				// Honestly should not matter: TODO
-				while (blockNoteChanging) { /* Wait for audio thread to finish */ };
-
-				const QueNote* qn = &mQueue.at(m_index);
-				const int t_id = qn->id;
-				const float t_amp = qn->amp;
-				const int t_ang = qn->angle;
-
-				if (t_id != -2) {
-					playNote(t_amp, t_ang);
-				};
-
-				// Debugging: Visually shows which notes that is played, will break pull Audio
-				m_ui->setFocusId(t_id);
-
-				m_index += 1;
-			}
-			else {
-				m_index = 0;
-				playQue = false;
-			}
-
-			intervalTimer = 0.0;
-		}
-	}
-}
-
-void AudioPlayer::playFoldQueue(float foldDelta, float foldTimer, int indexOverride) {
-	if (playQue) {
-		intervalTimer += foldDelta;
-
-
-		const float fixedInterval = 0.1;
-		if (intervalTimer > fixedInterval) {
-			int index = int(round(foldTimer * 10) - 1);
-			
-			if (indexOverride != -1) {
-				index = indexOverride;
-			}
-
-			//globjects::debug() << index << std::endl;
-
-			if (index >= 0 && index < mQueue.size()) {
-
-				while(blockNoteChanging) { /* Wait for audio thread to finish */ };
-
-
-				const QueNote* qn = &mQueue.at(index);
-				const int t_id = qn->id;
-				const float t_amp = qn->amp;
-				const int t_ang = qn->angle;
-
-				// Id == -2, Note is Mute
-				if (t_id != -2) {
-					playNote(t_amp, t_ang);
-				};
-				// Debugging: Visually shows which notes that is played, will break pull Audio
-				// m_ui->setFocusId(t_id);
-
-			}
-			intervalTimer = 0.0;
-		}
-
-
-
-	}
-
-}
-
-void AudioPlayer::playInternalQueue(float deltaTime, int index) {
-	if (!playQue) return;
-
-	intervalTimer += deltaTime;
-	if (intervalTimer > m_ui->Audio()->note_interval) {
-		
-		// Use internal index
-		if (index == -1) {
-			m_index += 1;
-		 	index = m_index;
-		}
-
-		if (index < 0 || index >= mQueue.size()) return;
-
-		const QueNote* qn = &mQueue.at(index);
-		if (qn->id == -2) return;
-
-		playNote(qn->amp, qn->angle);
-
-
-		// Debugging
-		if (m_ui->Audio()->enableVisualGuide) {
-			m_ui->setFocusId(qn->id);
-		}
-
-
-		if (m_index > mQueue.size()) {
-			m_index = -1;
-			playQue = false;
-		} 
-
-		intervalTimer = 0.0;
-	} 
-
-}
-
-
-
-void AudioPlayer::addToSound(float pluck) {
-	ms += pluck;
-}
-
+// Main Audio Thread
 void AudioPlayer::onAudio(AudioIOData& io)
 {
-	
+
+	// Display the current Audio Device in the GUI
 	if (m_ui->Audio()->defaultDevice == "None") {
 		m_ui->Audio()->defaultDevice = gam::AudioDevice::defaultOutput().name();
 	}
@@ -177,38 +22,129 @@ void AudioPlayer::onAudio(AudioIOData& io)
 		// toggle on/off audio
 		if (!mAudioOn) continue;
 
-		// If main thread is writing to mNotes then block this thread!
-		if (blockThread) {
-			continue;
-		}
-		// Block the ability to write to mNotes when values are read
-		blockNoteChanging = true;
-
-
 
 		float s = 0;
-		for (auto &note : mNotes) {
-			s += note->pluck();
-			
-		}
-
-		io.out(0) = s * m_ui->Audio()->volume;
-
-
-		// Unblock 
-		blockNoteChanging = false;
+		s = mNoteBuffer.readBuffer();
+				
+		io.out(0) = s;
 	}
 }
 
-void AudioPlayer::resetAllStrings()
-{
-	// Block the ability to write to mNotes when values are read
-	blockThread = true;
-	for (auto& note : mNotes) {
-		note->mute();
-		note->reset();
-	}
-	// Unblock 
-	blockThread = false;
+// Called every frame
+void AudioPlayer::mainThread(float deltaTime, int mode) {
+	if (mStopQue) return;
 
+	if (mode == 4) mainTimerPlayback(deltaTime, false); // Global Audio Playback
+	else if (mode == 2) mainTimerPlayback(deltaTime, true);
+	else if (mode == 3) mainMetricPlayback(m_ui->Lens()->lensDepthValue);
+	else if (mode == 5) mainFixedFrequency(m_ui->Lens()->lensRadius);
+}
+
+void AudioPlayer::mainTimerPlayback(float deltaTime, bool repeat) {
+
+	mInternalTimer += deltaTime;
+
+	if (mInternalTimer > m_ui->Audio()->note_interval && !mStagedNotes.empty()) {
+
+		// Retrive and play the next note
+		if (mIndex >= 0 || mIndex <= mStagedNotes.size()) {
+			auto sNote = std::move(mStagedNotes.at(mIndex));
+
+			mNoteBuffer.addNote(sNote.get()->freq, sNote.get()->amp, -1);
+
+			// Increment index and reset timer for next Staged Note
+			mIndex += 1;
+			mInternalTimer = 0.0f;
+		}
+
+	}
+
+	// If playback reaches the end of the staged notes
+	if (mIndex >= mStagedNotes.size()) {
+		mIndex = 0;
+		mStopQue = !repeat;
+	}
+}
+
+void AudioPlayer::mainMetricPlayback(float metric) {
+	int index = (mStagedNotes.size() - 1) - (metric * (mStagedNotes.size() - 1));
+
+	if (index != prevIndex && !mStagedNotes.empty()) {
+		auto& sNote = std::move(mStagedNotes.at(index));
+		mNoteBuffer.addNote(sNote.get()->freq, sNote.get()->amp);
+
+	}
+
+	prevIndex = index;
+}
+
+void AudioPlayer::mainFixedFrequency(float metric) {
+	int index = (FreqMap::m_Notes.size() - 1) - (metric * (FreqMap::m_Notes.size() - 1));
+
+	if (index != prevIndex) {
+		mNoteBuffer.addNote(FreqMap::m_Notes.at(index).freq, 0.5);
+
+	}
+
+	prevIndex = index;
+}
+
+
+
+// TODO Remove
+float AudioPlayer::preComputeAmplitudeReScaling() {
+	float sum = 0.0f;
+	for (const auto& note : mStagedNotes) {
+		sum += pow(note.get()->amp, 2);
+	}
+
+	mStagedNotesScaling = std::min(1.0f / sum, 1.0f);
+
+	globjects::debug() << mStagedNotesScaling << std::endl;
+	return mStagedNotesScaling;
+}
+
+
+
+void AudioPlayer::playNote(float value, int angle) {
+	mAudioOn = true;
+
+	float f = FreqMap::mapAngleToNote(angle);
+	float a = pow(value, 2);
+
+	mNoteBuffer.addNote(f, a);
+}
+
+
+void AudioPlayer::setAvailableNotes(std::vector<std::pair<float, int>> lines, int sort) {
+	mStagedNotes.clear();
+	mIndex = 0;
+	mStopQue = false;
+	mAudioOn = true;
+
+
+	// TODO Maybe to Sorting Here
+	for (auto line : lines) {
+		const float f = FreqMap::mapAngleToNote(line.second);
+		const float a = line.first;
+		mStagedNotes.push_back(std::make_unique<StagedNote>(f, a));
+	}
+	
+	sortStagedNotes(sort);
+	// TODO make sure the pre Computed resclaing take into account the pow(2)
+	preComputeAmplitudeReScaling();
+}
+
+
+
+bool compareByFrequency(const std::unique_ptr<StagedNote>& a, const std::unique_ptr<StagedNote>& b) {
+	return a->freq < b->freq;
+}
+bool compareByAmplitude(const std::unique_ptr<StagedNote>& a, const std::unique_ptr<StagedNote>& b) {
+	return a->amp > b->amp;
+}
+
+void AudioPlayer::sortStagedNotes(int sortMode) {
+	if (sortMode == 1) std::sort(mStagedNotes.begin(), mStagedNotes.end(), compareByAmplitude); // Amplitude sorted
+	else if (sortMode == 2) std::sort(mStagedNotes.begin(), mStagedNotes.end(), compareByFrequency); // Amplitude sorted
 }
