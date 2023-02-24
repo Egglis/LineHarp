@@ -63,6 +63,8 @@ namespace lineweaver {
 
 		float getFrechetDist(int i, int j, float d, std::vector<std::vector<float>> *matrix);
 
+		bool isLegalIndex(int i, int size);
+
 		std::vector<float> normalize(std::vector<float> list);
 
 

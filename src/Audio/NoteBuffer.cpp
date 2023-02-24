@@ -10,20 +10,27 @@ using namespace gam;
 
 
 
-void NoteBuffer::addNote(float f, float a, float reScale)
+void NoteBuffer::addNote(int i, float f, float a, float reScale)
 {
 
 	std::unique_lock<std::mutex> lock(mtx);
 
 	// Add new Note
-	Note* note = new Note(f, a);
-	if(reScale > 0) note->reScaleAmp(reScale);
+	Note* note = new Note(i, f, a);
 	
 	mNotes.push_back(note);
 
 	lock.unlock();
 }
 
+std::map<int, float> NoteBuffer::getOscillation() {
+	std::unique_lock<std::mutex> lock(mtx);
+
+	std::map<int, float> copy = mOsc;
+
+	lock.unlock();
+	return copy;
+}
 
 float NoteBuffer::readBuffer()
 {
@@ -40,14 +47,20 @@ float NoteBuffer::readBuffer()
 	float max = 0.6f;
 	reScale = std::min(max / sum, max);
 	
-
+	mOsc.clear();
 	std::vector<Note*> to_delete;
 	for (auto it = mNotes.begin(); it != mNotes.end(); ++it) {
 		auto note = *it;
 
 		float am = (note->amp() * reScale);
 		sound += note->pluck() * am;
-		note->reduce(0.0000001 * mNotes.size()); // TODO make the falloff an adv option --> 
+
+		if (note->getLineID() > -1) mOsc[note->getLineID()] = sound;
+
+		
+
+		// TODO make the falloff an adv option --> 
+		note->reduce(0.000001 * mNotes.size()); 
 
 		// Mark notes which amplitude < 0 for deletion
 		if (note->done()) {
@@ -61,7 +74,6 @@ float NoteBuffer::readBuffer()
 		mNotes.erase(std::remove(mNotes.begin(), mNotes.end(), note), mNotes.end());
 		delete note;
 	}
-
 
 	lock.unlock();
 

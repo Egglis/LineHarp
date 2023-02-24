@@ -5,7 +5,7 @@ using namespace gam;
 
 
 
-Note::Note(float freq, float amp) : mFreq{ freq }, mAmp{ amp }
+Note::Note(int id, float freq, float amp) : id{ id }, mFreq { freq }, mAmp{ amp }
 {
 	mString.freq(freq);
 }

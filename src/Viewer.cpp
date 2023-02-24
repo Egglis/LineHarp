@@ -22,6 +22,7 @@
 #include <sstream>
 #include <list>
 
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
@@ -34,6 +35,7 @@ using namespace globjects;
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_glfw.h>
 
+
 Viewer::Viewer(GLFWwindow *window, Scene *scene) : m_window(window), m_scene(scene)
 {
 	ImGui::CreateContext();
@@ -45,6 +47,7 @@ Viewer::Viewer(GLFWwindow *window, Scene *scene) : m_window(window), m_scene(sce
 	glfwSetMouseButtonCallback(window, &Viewer::mouseButtonCallback);
 	glfwSetCursorPosCallback(window, &Viewer::cursorPosCallback);
 	glfwSetScrollCallback(window, &Viewer::scrollCallback);
+	
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
@@ -58,7 +61,7 @@ Viewer::Viewer(GLFWwindow *window, Scene *scene) : m_window(window), m_scene(sce
 	//------------------------------------------------------------------------
 
 	int i = 1;
-
+	
 	globjects::debug() << "Available renderers (use the number keys to toggle):";
 
 	for (auto& r : m_renderers)
@@ -66,6 +69,9 @@ Viewer::Viewer(GLFWwindow *window, Scene *scene) : m_window(window), m_scene(sce
 		globjects::debug() << "  " << i << " - " << typeid(*r.get()).name();
 		++i;
 	}
+
+	
+	
 }
 
 void Viewer::display()
@@ -249,7 +255,12 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 	{
 		if (viewer->m_showUi)
 		{
+			/*
 			ImGuiIO& io = ImGui::GetIO();
+			/*
+			// should avoid some weird bug with some keybords and ImGui.KeyMap[key] assertion error
+			if (key < 0 || key > 511) return; 
+
 			if (action == GLFW_PRESS)
 				io.KeysDown[key] = true;
 			if (action == GLFW_RELEASE)
@@ -260,15 +271,17 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 			io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
 			io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
 			io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
-
+		
 			if (io.WantCaptureKeyboard)
 				return;
+				*/
 		}
-
+		/*
 		if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE)
 		{
 			viewer->m_showUi = !viewer->m_showUi;
 		}
+		*/
 
 		if (key == GLFW_KEY_F2 && action == GLFW_RELEASE)
 		{
@@ -336,6 +349,26 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 			else if (action == GLFW_RELEASE) {
 				viewer->m_playAudio = false;
 			}
+		}
+
+
+		else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+			viewer->m_playbackModeButton.press();
+		}
+
+		if (key == GLFW_KEY_W && action == GLFW_PRESS && mods == GLFW_MOD_SHIFT) viewer->m_incLensRadius = 1;
+		else if (key == GLFW_KEY_W && action == GLFW_RELEASE && mods == GLFW_MOD_SHIFT) viewer->m_incLensRadius = 0;
+		else if (key == GLFW_KEY_S && action == GLFW_PRESS && mods == GLFW_MOD_SHIFT) viewer->m_incLensRadius = -1;
+		else if (key == GLFW_KEY_S && action == GLFW_RELEASE && mods == GLFW_MOD_SHIFT) viewer->m_incLensRadius = 0;
+		
+		if (key == GLFW_KEY_W && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) viewer->m_incLensDepth = 1;
+		else if (key == GLFW_KEY_W && action == GLFW_RELEASE && mods == GLFW_MOD_CONTROL) viewer->m_incLensDepth = 0;
+		else if (key == GLFW_KEY_S && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) viewer->m_incLensDepth = -1;
+		else if (key == GLFW_KEY_S && action == GLFW_RELEASE && mods == GLFW_MOD_CONTROL) viewer->m_incLensDepth = 0;
+
+		if ((key != GLFW_KEY_W || key != GLFW_KEY_S) && action == GLFW_RELEASE && mods == 0) {
+			viewer->m_incLensRadius = 0;
+			viewer->m_incLensDepth = 0;
 		}
 
 
@@ -416,6 +449,7 @@ void Viewer::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 
 		// clamp brushing angle to adjust to GUI slider
 		viewer->m_scrollWheelAngle = clamp(viewer->m_scrollWheelAngle, -90.f, 90.0f);
+		globjects::debug() << xoffset << ", " << yoffset << std::endl;
 	}
 }
 
@@ -428,7 +462,6 @@ void Viewer::charCallback(GLFWwindow* window, unsigned int c)
 		if (viewer->m_showUi)
 		{
 			ImGuiIO& io = ImGui::GetIO();
-
 			if (c > 0 && c < 0x10000)
 				io.AddInputCharacter((unsigned short)c);
 

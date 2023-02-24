@@ -57,7 +57,6 @@ namespace lineweaver
 		LineRenderer(Viewer *viewer);
 		virtual void display();
 	private:
-		void removeNonUnique(std::vector<int>& vec);
 		SubData getSubDataFromLensBuffer(int offset);
 
 		LinkedListRendering* renderingStrategy = NULL;
@@ -148,6 +147,8 @@ namespace lineweaver
 		bool m_lensDepthChangingHold = false;
 
 		AudioMode mPrevFrameAudioMode = NONE;
+
+		int m_incHoldCounter = 1;
 		// ------------------------------------------------------------------------------------------
 	};
 

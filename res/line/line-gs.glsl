@@ -64,6 +64,7 @@ uniform int numberOfTimesteps;
 void spawnPoint(vec4 point, int index) {
 
 
+
 	gsFragmentDepth = 0.0f;
 	gsFragmentLayerLuminance = vsOut[index].pointImportance;
 	gsFragmentImportance = vsOut[index].pointImportance;

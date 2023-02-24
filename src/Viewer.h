@@ -92,8 +92,9 @@ namespace lineweaver
 		bool enforcedImportanceRefresh();
 		bool enforcedOverplottingComp();
 
-		void setLensDepthValue(float z) { m_lensDepthValue = std::clamp(m_lensDepthValue+z, 0.0f, 1.0f); };
-		void setLensRadiusValue(float z) { m_lensRadiusValue = std::clamp(m_lensRadiusValue+z, 0.0f, 1.0f); };
+
+		void setLensDepthValue(float z) { m_lensDepthValue = std::clamp(m_lensDepthValue + z, 0.0f, 1.0f); };
+		void setLensRadiusValue(float z) { m_lensRadiusValue = std::clamp(m_lensRadiusValue + z, 0.0f, 1.0f); };
 
 
 		float getLensDepthValue() { return m_lensDepthValue; };
@@ -102,7 +103,9 @@ namespace lineweaver
 		
 		KeyButton m_foldButton;
 		KeyButton m_pullButton;
-
+		int m_incLensDepth = 0;
+		int m_incLensRadius = 0;
+		KeyButton m_playbackModeButton;
 	private:
 
 		void beginFrame();
@@ -169,6 +172,10 @@ namespace lineweaver
 
 
 		bool m_playAudio = false;
+
+
+
+
 	};
 
 

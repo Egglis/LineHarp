@@ -15,7 +15,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-
 #ifndef GLM_ENABLE_EXPERIMENTAL
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
@@ -195,8 +194,10 @@ void LineRenderer::display()
 	static bool importanceChanged = false;
 
 	m_uiRenderer.animationSettingsGUI();
-	m_uiRenderer.audioSettingsGUI();
+	m_uiRenderer.audioSettingsMenuGUI();
 	m_uiRenderer.keybindingsInfoGUI();
+	
+
 
 
 	ImGui::Begin("Importance Driven Dense Line Graphs");
@@ -328,17 +329,19 @@ void LineRenderer::display()
 			initLensPosition = true;
 		}
 
-
 		ImGui::Combo("Ease Function", &m_uiRenderer.easeFunctionID, "Linear\0In Sine\0Out Sine\0In Out Sine\0In Quad\0Out Quad\0In Out Quad\0In Cubic\0Out Cubic\0In Out Cubic\0In Quart\0Out Quart\0In Out Quart\0In Quint\0Out Quint\0In Out Quitn\0In Expo\0Out Expo\0In Out Expo\0");
 	}
 
 	m_uiRenderer.scalingGUI();
 	m_uiRenderer.linePropretiesGUI();
 	m_uiRenderer.selectionGUI(viewer());
+	m_uiRenderer.audioSettingsGUI();
 	m_uiRenderer.lensSettingsGUI(viewer());
 	m_uiRenderer.overplottingMeasurmentGUI(viewer());
 
 	ImGui::End();
+
+
 	if (!m_dispAction) {
 		if (m_uiRenderer.Lens()->lensDisp != m_previousLensDisp) {
 			m_dispAction = true;
@@ -350,7 +353,7 @@ void LineRenderer::display()
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	if (!viewer()->m_lensDepthChanging && mAudioMode != GLOBAL && !viewer()->m_lensRadiusChanging) {
+	if (mAudioMode != GLOBAL) {
 		double mouseX, mouseY;
 		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
 
@@ -463,6 +466,31 @@ void LineRenderer::display()
 		m_pullTimer = max(0.0f, m_pullTimer - pullDelta);
 	}
 
+	// All constants are choosen based on what feel best
+	if (viewer()->m_incLensRadius != 0) {
+		float sign = viewer()->m_incLensRadius;
+		viewer()->setLensRadiusValue((sign / 10.0f) * deltaTime * (m_incHoldCounter / 100.0f));
+		viewer()->m_lensRadiusChanging = true;
+		m_incHoldCounter++;
+
+	}
+	else if (viewer()->m_incLensDepth != 0) {
+		float sign = viewer()->m_incLensDepth;
+		viewer()->setLensDepthValue((sign / 10.0f) * deltaTime * (m_incHoldCounter/100.0f));
+		viewer()->m_lensDepthChanging = true;
+		m_incHoldCounter++;
+	}
+	else {
+		viewer()->m_lensRadiusChanging = false;
+		viewer()->m_lensDepthChanging = false;
+		m_incHoldCounter = 1;
+	}
+
+	if (viewer()->m_playbackModeButton.pressed) {
+		Settings::Audio* audioSet = m_uiRenderer.Audio();
+		audioSet->importance = !audioSet->importance;
+		viewer()->m_playbackModeButton.release();
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Line rendering pass and linked list generation
@@ -490,11 +518,6 @@ void LineRenderer::display()
 	glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquationi(0, GL_FUNC_ADD);
 	*/
-
-
-
-
-
 
 	// SSBO --------------------------------------------------------------------------------------------
 	m_intersectionBuffer->bindBase(GL_SHADER_STORAGE_BUFFER, 1);
@@ -536,7 +559,7 @@ void LineRenderer::display()
 	else {
 		programLine->setUniform("focusLineID", -1);
 	}
-
+	programLine->setUniform("audioLineID", m_uiRenderer.Selection()->audioLineId);
 	programLine->setUniform("lensPosition", m_lensPosition);
 	programLine->setUniform("delayedLensPosition", m_delayedLensPosition);
 	programLine->setUniform("delayedTValue", t);
@@ -569,6 +592,7 @@ void LineRenderer::display()
 		m_uiRenderer.Selection()->selectionMode,
 		m_uiRenderer.Selection()->selectionRange);
 
+	renderingStrategy->setOscMap(m_AudioPlayer.peekBufferOsc());
 	renderingStrategy->performRendering(programLine, m_vao.get());
 
 	programLine->release();
@@ -697,285 +721,117 @@ void LineRenderer::display()
 
 	/* AUDIO -------------------------------------------------- */
 
-	// Resets the audio player inCase of audio issues
-	if (m_uiRenderer.Audio()->reset) {
-		m_AudioPlayer.audioIO().close();
-		m_uiRenderer.Audio()->reset = false;
-		m_AudioPlayer.start();
-	}
-
 	// Read the angle from texture
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
+
+
 	GLfloat data[4];
 	glReadPixels(xPixel, yPixel, 1, 1, GL_RGBA, GL_FLOAT, &data);
 
 	int id = int(data[0]);
 	float xDir = float(data[1]);
 	float yDir = float(data[2]);
-
-	// Debugging Texture:
-	// globjects::debug() << id << ", " << xDir << ", " << yDir << ", " << data[3] << std::endl;
-
+	
+	// Transform data into degrees
 	const float radians = acos(dot(vec2(xDir, yDir), vec2(0.0, -1.0)));
 	const int degrees = int(round(radians * (180.0 / glm::pi<float>())));
 
 
 	glReadBuffer(GL_NONE);
 
-	// Check for any key presses
+	// Check for any special key presses
 	bool readSubData = false;
 	AudioMode mode = NONE;
 
-	// TODO make the syntax consisitant
+	// TODO make the syntax consistent
 	if (viewer()->playAudioQueue()) mode = GLOBAL;
 	else if (viewer()->m_pullButton.pressed) mode = PULL;
 	else if (viewer()->m_lensDepthChanging) mode = DRAG;
 	else if (viewer()->m_lensRadiusChanging) mode = RADIUS;
 
-	globjects::debug() << viewer()->m_lensRadiusChanging << std::endl;
-	// Set the current playing mode!
+	const int metric = m_uiRenderer.Audio()->metric; // Get the current metric we want to playback the audio on
 
-	int metric = m_uiRenderer.Audio()->metric;
-	if (id >= 0 
-		&& id <= numberOfTrajectories
-		&& degrees < 181
-		&& mode == NONE
-		&& !viewer()->m_lensDepthChanging
-		&& !viewer()->m_lensRadiusChanging) {
-		if (viewer()->m_mousePressed[0] && prevID != id ) {
+	// Update the focusID when clicking, independant of Audio
+
+	const bool idWithinBounds = (id >= 0) && (id <= numberOfTrajectories);
+	const bool legalDegree = degrees < 181;
+	const bool isEnabled = mode == NONE || (mode == PULL && !m_uiRenderer.Audio()->importance);
+
+	if (idWithinBounds && legalDegree && isEnabled && !viewer()->m_lensRadiusChanging) {
+
+
+		if (viewer()->m_mousePressed[0]) {
 			m_uiRenderer.setFocusId(id);
 		}
 
-		// Play the current hovered pixel if mouse have been moved
-		//  && mode != gam::AudioFeedbackModes::NEVER_PLAY
-		const bool moved = (xPixel != prevPixelX || yPixel != prevPixelY);
-		if (moved && audioTimer >= m_uiRenderer.Audio()->note_interval && !m_uiRenderer.Audio()->mute) {
+		const bool mouseMoved = (xPixel != prevPixelX || yPixel != prevPixelY);
+		const bool timerReset = audioTimer >= m_uiRenderer.Audio()->note_interval;
+
+		if (mouseMoved && timerReset && !m_uiRenderer.Audio()->mute) {
+
 			SimTable* simTable = renderingStrategy->getSimTable();
 			float vol = 0.0;
 
+			bool skipPlayNote = false;
 			if (metric == 0) {
-				vol = simTable->getImportanceTable().at(id); // Importance
+				vol = simTable->getImportanceTable().at(id);
+				skipPlayNote = vol > m_uiRenderer.Lens()->lensDepthValue;
 			}
 			else if (metric == 1) {
 				vol = simTable->get(m_uiRenderer.Selection()->focusLineId, id, m_uiRenderer.Selection()->selectionRange);
 			}
 
-			m_AudioPlayer.playNote(vol, degrees);
+			if (!skipPlayNote) {
+				m_AudioPlayer.playNote(id, vol, degrees);
+			}
+
 			prevID = id;
 			audioTimer = 0.0f;
-
 		}
 	
 	}
 
-
+	// Audio for speciall key presses
 	if(mode != NONE && mode != mPrevFrameAudioMode && mode != RADIUS|| mode == PULL){
+
 		SimTable* simTable = renderingStrategy->getSimTable();
-		std::vector<std::pair<float, int>> tmpLines;
+		std::vector<std::pair<int,  std::pair<float, int>>> tmpLines;
+
+
 		for (int i = 0; i < numberOfTrajectories; i++) {
 
 			SubData subData = getSubDataFromLensBuffer(i);
+			const Settings::Selection* selSettings = m_uiRenderer.Selection();
 
-			// Within the lens
-			if (subData.dist > 0) {
+			const bool isInsideLens = subData.dist > 0;
+			if (isInsideLens) {
 
 				float vol = 0.0f;
 				if (mode == GLOBAL || mode == DRAG) {
-					vol = simTable->getImportanceTable().at(i); // Importance
-					tmpLines.push_back(std::make_pair(vol, subData.degree));
+
+					if (metric == 0) vol = simTable->getImportanceTable().at(i);
+					else if (metric == 1) vol = simTable->get(selSettings->focusLineId, subData.id, selSettings->selectionRange);
+
+					tmpLines.push_back(std::make_pair(i, std::make_pair(vol, subData.degree)));
 				}
-				else if (mode == PULL) {
-					vol = simTable->get(m_uiRenderer.Selection()->focusLineId, i, m_uiRenderer.Selection()->selectionRange);
+				else if (mode == PULL && m_uiRenderer.Audio()->importance) {
+					vol = simTable->get(selSettings->focusLineId, i, selSettings->selectionRange);
 					if (vol > 0) {
-						tmpLines.push_back(std::make_pair(vol, subData.degree));
+						tmpLines.push_back(std::make_pair(i, std::make_pair(vol, subData.degree)));
 					}
 				}
 				
 					
 			}
 		}
-		m_AudioPlayer.setAvailableNotes(tmpLines, 1);
-		// TODO pass a condition which needs to met in order to play the "next" note
 
+		m_AudioPlayer.setAvailableNotes(tmpLines, 1);
 	}
 
-	// Continues this frame within the audio object!
+	// Continues this thread within the audio object!
 	m_AudioPlayer.mainThread(deltaTime, mode);
 	mPrevFrameAudioMode = mode;
 
-
-		// Once all lines have been addded, the queue is sorted based on importance
-		//m_AudioPlayer.sortQueue(0);
-		//m_AudioPlayer.startQueue();
-
-	// Check if any audio conition is true
-	// Set the necassarey bools
-
-	// if audio should be played record!
-
-	// Reset bools
-	
-
-	/*
-	bool playAudio = false;
-
-	// Shift + LM - 
-	if (viewer()->m_lensDepthChanging && !m_lensDepthChangingHold) {
-		m_lensDepthChangingHold = true;
-		playAudio = true;
-		mAudioMode = MOUSE;
-	}
-	else if (m_lensDepthChangingHold) {
-		mAudioMode = MOUSE;
-	}
-	else if (!viewer()->m_lensDepthChanging) {
-		m_lensDepthChangingHold = false;
-		//m_AudioPlayer.stopQueue();
-	}
-
-	// G - Keybinding - 
-	if (viewer()->playAudioQueue()) {
-		playAudio = true;
-		mAudioMode = GLOBAL;
-	}
-
-
-	/*
-	if (viewer()->m_pullButton.pressed && m_pullAudioTimer > m_uiRenderer.Audio()->note_interval) {
-		playAudio = true;
-		mAudioMode = PULL;
-
-		if (!m_AudioPlayer.isQuePlaying()) {
-			m_pullAudioTimer = 0.0;
-		}
-	} else {
-		m_pullAudioTimer += deltaTime * m_uiRenderer.Animation()->globalAnimationFactor;
-	}
-
-
-
-	// Main Lens Audio Player!
-	if (playAudio) {
-		//m_AudioPlayer.resetQueue();
-
-		SimTable* simTable = renderingStrategy->getSimTable();
-
-		for (int i = 0; i < numberOfTrajectories; i++) {
-
-			SubData subData = getSubDataFromLensBuffer(i);
-
-			// Within the lens
-			if (subData.dist > 0) {
-
-				float vol = 0.0;
-				if (metric == 0) {
-					vol = simTable->getImportanceTable().at(i); // Importance
-				}
-				else if (metric == 1) {
-					vol = simTable->get(m_uiRenderer.Selection()->focusLineId, i, m_uiRenderer.Selection()->selectionRange);
-				}
-
-				if (mAudioMode == PULL) {
-					vol = simTable->get(m_uiRenderer.Selection()->focusLineId, i, m_uiRenderer.Selection()->selectionRange);
-					if (vol > m_uiRenderer.Selection()->selectionRange) {
-						//m_AudioPlayer.addNoteToQueue(i, vol, subData.degree);
-					}
-				}
-				else {
-					//m_AudioPlayer.addNoteToQueue(i, vol, subData.degree);
-
-				}
-
-			}
-
-		}
-
-		// Once all lines have been addded, the queue is sorted based on importance
-		//m_AudioPlayer.sortQueue(0);
-		//m_AudioPlayer.startQueue();
-	}
-	*/
-	// globjects::debug() << mAudioMode << std::endl;
-	/*
-	if (mAudioMode == MOUSE) {
-		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
-		m_AudioPlayer.playInternalQueue(deltaTime, tIndex);
-
-		if (!viewer()->m_lensDepthChanging) {
-			m_AudioPlayer.stopQueue();
-			mAudioMode = NONE;
-			m_lensDepthChangingHold = false;
-		}
-
-	}
-
-	else if (mAudioMode == GLOBAL) {
-		m_AudioPlayer.startQueue();
-		m_AudioPlayer.playInternalQueue(deltaTime);
-		if (m_AudioPlayer.m_index == 0) {
-			m_AudioPlayer.stopQueue();
-			mAudioMode = NONE;
-		}
-	}
-	/*
-	else if (mAudioMode == PULL) {
-		m_AudioPlayer.startQueue();
-		m_AudioPlayer.playInternalQueue(deltaTime);
-	}
-
-	// Pull Audio
-	
-	if ((viewer()->m_pullButton.pressed || viewer()->m_pullButton.hold) && m_pullAudioTimer > m_uiRenderer.Audio()->note_interval) {
-		viewer()->m_pullButton.holding();
-
-		m_AudioPlayer.stopQueue();
-		m_AudioPlayer.resetQueue();
-
-		SimTable* simTable = renderingStrategy->getSimTable();
-		for (int i = 0; i < numberOfTrajectories; i++) {
-
-			SubData subData = getSubDataFromLensBuffer(i);
-
-			// Within the lens
-			if (subData.dist > 0) {
-				const float	vol = simTable->get(m_uiRenderer.Selection()->focusLineId, i, m_uiRenderer.Selection()->selectionRange);
-
-				if (vol > m_uiRenderer.Selection()->selectionRange) {
-					m_AudioPlayer.addNoteToQueue(i, vol, degrees);
-				}
-
-			}
-		}
-
-		m_AudioPlayer.startQueue();
-		if (!m_AudioPlayer.isQuePlaying()) {
-			m_pullAudioTimer = 0.0;
-		}
-	}
-	else {
-		m_pullAudioTimer += deltaTime * m_uiRenderer.Animation()->globalAnimationFactor;
-	}
-	*/
-	
-	// Play the correct queue and timing
-/*
-	if (viewer()->m_foldButton.hold || m_foldTimer > 0.0) {
-		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
-		m_AudioPlayer.playFoldQueue(foldDelta, m_foldTimer, tIndex);
-	}
-
-	if (viewer()->m_pullButton.hold) {
-		m_AudioPlayer.playQueue(pullDelta);
-	}
-
-	else if (m_lensDepthChangingHold) {
-		const int tIndex = m_AudioPlayer.queSize() - (int)(viewer()->m_lensDepthValue * m_AudioPlayer.queSize() + 0.5);
-		m_AudioPlayer.playFoldQueue(foldDelta, m_foldTimer, tIndex);
-	}
-	else {
-		m_AudioPlayer.playQueue(deltaTime);
-	}
-	*/
 
 	prevPixelX = xPixel;
 	prevPixelY = yPixel;
@@ -1042,7 +898,7 @@ void LineRenderer::display()
 
 }
 
-
+// Simply retrives the subData for a speciffic texture offsett
 SubData LineRenderer::getSubDataFromLensBuffer(int offset) {
 	vec4 vecData;
 	m_lensBuffer->getSubData(offset * sizeof(vec4), sizeof(vec4), &vecData);
@@ -1058,24 +914,3 @@ SubData LineRenderer::getSubDataFromLensBuffer(int offset) {
 	return SubData(id, degrees, dist);
 }
 
-void LineRenderer::removeNonUnique(std::vector<int>& vec)
-{
-	// Sort the vector
-	std::sort(vec.begin(), vec.end());
-
-	// Find the first non-unique element
-	auto it = std::adjacent_find(vec.begin(), vec.end());
-
-	// If there are no non-unique elements, we're done
-	if (it == vec.end()) return;
-
-	// Iterate over the rest of the vector, looking for non-unique elements
-	while (it != vec.end())
-	{
-		// Remove the current non-unique element
-		it = vec.erase(it);
-
-		// Find the next non-unique element
-		it = std::adjacent_find(it, vec.end());
-	}
-}

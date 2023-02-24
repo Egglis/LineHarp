@@ -32,8 +32,6 @@ namespace lineweaver
 		bool m_light = false;
 		bool m_rotating = false;
 		bool m_scaling = false;
-		bool m_lensDepth = false;
-		bool m_lensRadius = false;
 
 		bool m_panning = false;
 		bool m_benchmark = false;

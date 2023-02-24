@@ -499,7 +499,10 @@ void LinkedListRendering::weaveSeries(const TableData& table)
 	const Table* t = &table;
 	m_simTable.setup(t, 1);
 }
+/*
+Pass some finelized std::vector<ocilation> to the function to reduce the number of calls to AudioPLayer/AudioBuffer
 
+*/
 
 void LinkedListRendering::performRendering(globjects::Program* p, globjects::VertexArray* va) {
 
@@ -511,10 +514,15 @@ void LinkedListRendering::performRendering(globjects::Program* p, globjects::Ver
 		p->setUniform("trajectoryID", i);
 
 		float similarity = 0.0;
-		similarity = m_simTable.get(m_focusID, i, m_selectionRange);
+		similarity = m_simTable.get(m_focusID, i, m_selectionRange); 
 		
 		p->setUniform("similarity", similarity);
+
+		p->setUniform("lineOsc", mOscMap[i]);
+
 		// Compute/Retrive the similarity value 0 -> 1, where 1 = Focus Line ID
+
+		// TODO somehow get the actual ocelatiion of a line and assign in the each 
 
 		// globjects::debug() << m_indices.at(i) << std::endl;
 		va->drawElements(GL_PATCHES,

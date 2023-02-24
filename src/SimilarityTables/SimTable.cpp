@@ -14,10 +14,16 @@ using namespace lineweaver;
 // Gets the similarity for, focus: row, current: col
 float SimTable::get(int focus, int current, float range) {
 
+	
+
 	if (SelectionModes::SINGLE == m_mode || range <= 0.0f) {
 		if (focus == current) return 1.0f;
 	}
 	else if (SelectionModes::IMPORTANCE == m_mode) {
+
+		const int size = m_importanceTable.size();
+		if(!(isLegalIndex(focus, size) && isLegalIndex(current, size))) return 0.0f;
+
 		float selectedImportance = m_importanceTable.at(focus);
 		float currentImportance = m_importanceTable.at(current);
 		float diff = abs(selectedImportance - currentImportance);
@@ -26,6 +32,11 @@ float SimTable::get(int focus, int current, float range) {
 		}
 	}
 	else {
+
+		const int sizeX = m_midPointTable.size();
+		const int sizeY = m_midPointTable.at(0).size();
+		if (!(isLegalIndex(focus, sizeX) && isLegalIndex(current, sizeY))) return 0.0f;
+
 		float dist = 0.0f;
 		if (SelectionModes::MIDPOINT == m_mode) dist = m_midPointTable.at(focus).at(current);
 		else if (SelectionModes::MINDIST == m_mode) dist = m_minDistTable.at(focus).at(current);
@@ -234,6 +245,11 @@ float SimTable::getFrechetDist(int i, int j, float d, std::vector<std::vector<fl
 
 	return INFINITY;
 	
+}
+
+bool SimTable::isLegalIndex(int i, int size)
+{
+	return (i >= 0 && i < size);
 }
 
 

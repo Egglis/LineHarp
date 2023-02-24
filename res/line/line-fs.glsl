@@ -50,6 +50,7 @@ uniform vec3 focusLineColor;
 uniform vec3 haloColor;
 
 uniform int focusLineID;
+uniform int audioLineID;
 uniform int trajectoryID;
 
 uniform float lensRadius;
@@ -59,6 +60,7 @@ uniform vec2 delayedLensPosition;
 uniform float brushingAngle;
 uniform float testSlider;
 uniform float similarity;
+uniform float lineOsc;
 
 vec3 indexToColor(int index) {
 	return vec3(
@@ -112,13 +114,22 @@ void main()
 #endif
 
 #ifdef FOCUS_LINE
-
 	currentLineColor = mix(lineColor, focusLineColor, similarity);
-	
+
+
+#endif
+
+#ifdef AUDIO_GUIDE
+	if(lineOsc != 0) {
+		currentLineColor =  mix(lineColor, vec3(0, 0, 1), abs(lineOsc)*100);
+	}
 #endif
 
 #ifdef DEPTH_LUMINANCE_COLOR
 	if(focusLineID != trajectoryID){
+		currentLineColor.rgb *= (0.5+0.5*gsFragmentImportance);
+	} 
+	else if(audioLineID != trajectoryID){
 		currentLineColor.rgb *= (0.5+0.5*gsFragmentImportance);
 	}
 #endif
@@ -240,6 +251,8 @@ void main()
 
 	if(focusLineID == trajectoryID){
 		// make sure line in focus is fully opaque
+		entry.color = lineChartTexture;
+	}else if (audioLineID == trajectoryID) {
 		entry.color = lineChartTexture;
 	}else{
 		// use importance for pre-multiplied alpha

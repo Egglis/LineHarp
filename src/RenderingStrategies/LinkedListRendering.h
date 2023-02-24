@@ -26,13 +26,15 @@ namespace lineweaver
 			m_selectionRange = range;
 		};
 
+		void setOscMap(std::map<int, float> osc) { mOscMap = osc; };
+
 		SimTable* getSimTable() { return &m_simTable; };
 
 	private:
 		void prepareIndicesBuffer();
 
 
-
+		std::map<int, float> mOscMap;
 		std::vector<std::vector<GLuint>> m_indices;
 		
 		int m_focusID = 0;

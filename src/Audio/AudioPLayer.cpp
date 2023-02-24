@@ -50,7 +50,11 @@ void AudioPlayer::mainTimerPlayback(float deltaTime, bool repeat) {
 		if (mIndex >= 0 || mIndex <= mStagedNotes.size()) {
 			auto sNote = std::move(mStagedNotes.at(mIndex));
 
-			mNoteBuffer.addNote(sNote.get()->freq, sNote.get()->amp, -1);
+			if(m_ui->Selection()->enableVisualAudioGuide) m_ui->Selection()->audioLineId = sNote.get()->id;
+
+
+
+			mNoteBuffer.addNote(sNote.get()->id, sNote.get()->freq, sNote.get()->amp, -1);
 
 			// Increment index and reset timer for next Staged Note
 			mIndex += 1;
@@ -71,7 +75,10 @@ void AudioPlayer::mainMetricPlayback(float metric) {
 
 	if (index != prevIndex && !mStagedNotes.empty()) {
 		auto& sNote = std::move(mStagedNotes.at(index));
-		mNoteBuffer.addNote(sNote.get()->freq, sNote.get()->amp);
+
+		if (m_ui->Selection()->enableVisualAudioGuide) m_ui->Selection()->audioLineId = sNote.get()->id;
+
+		mNoteBuffer.addNote(sNote.get()->id, sNote.get()->freq, sNote.get()->amp);
 
 	}
 
@@ -82,7 +89,7 @@ void AudioPlayer::mainFixedFrequency(float metric) {
 	int index = (FreqMap::m_Notes.size() - 1) - (metric * (FreqMap::m_Notes.size() - 1));
 
 	if (index != prevIndex) {
-		mNoteBuffer.addNote(FreqMap::m_Notes.at(index).freq, 0.5);
+		mNoteBuffer.addNote(-1, FreqMap::m_Notes.at(index).freq, 0.5);
 
 	}
 
@@ -100,23 +107,24 @@ float AudioPlayer::preComputeAmplitudeReScaling() {
 
 	mStagedNotesScaling = std::min(1.0f / sum, 1.0f);
 
-	globjects::debug() << mStagedNotesScaling << std::endl;
 	return mStagedNotesScaling;
 }
 
 
 
-void AudioPlayer::playNote(float value, int angle) {
+void AudioPlayer::playNote(int id, float value, int angle) {
 	mAudioOn = true;
 
 	float f = FreqMap::mapAngleToNote(angle);
 	float a = pow(value, 2);
 
-	mNoteBuffer.addNote(f, a);
+	if (m_ui->Selection()->enableVisualAudioGuide) m_ui->Selection()->audioLineId = id;
+
+	mNoteBuffer.addNote(id, f, a);
 }
 
 
-void AudioPlayer::setAvailableNotes(std::vector<std::pair<float, int>> lines, int sort) {
+void AudioPlayer::setAvailableNotes(std::vector<std::pair<int, std::pair<float, int>>> lines, int sort) {
 	mStagedNotes.clear();
 	mIndex = 0;
 	mStopQue = false;
@@ -125,14 +133,14 @@ void AudioPlayer::setAvailableNotes(std::vector<std::pair<float, int>> lines, in
 
 	// TODO Maybe to Sorting Here
 	for (auto line : lines) {
-		const float f = FreqMap::mapAngleToNote(line.second);
-		const float a = line.first;
-		mStagedNotes.push_back(std::make_unique<StagedNote>(f, a));
+		const float f = FreqMap::mapAngleToNote(line.second.second);
+		const float a = line.second.first;
+		const int i = line.first;
+		mStagedNotes.push_back(std::make_unique<StagedNote>(i, f, a));
 	}
 	
 	sortStagedNotes(sort);
-	// TODO make sure the pre Computed resclaing take into account the pow(2)
-	preComputeAmplitudeReScaling();
+
 }
 
 

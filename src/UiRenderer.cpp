@@ -169,29 +169,44 @@ void UiRenderer::animationSettingsGUI() {
 
 }
 
-void UiRenderer::audioSettingsGUI() {
-	if (ImGui::BeginMenu("Audio")) {
+void UiRenderer::audioSettingsMenuGUI() {
+	if (ImGui::BeginMenu("Audio Settings")) {
 		ImGui::SliderFloat("Interval between each note:", &m_audioSettings.note_interval, 0.0, 1.0);
 		ImGui::SliderFloat("Global volume", &m_audioSettings.volume, 0.0, 1.0);
-		ImGui::SliderFloat("Lowest possible amplitude:", &m_audioSettings.minAmp, 0.0, 1.0);
 
-		m_audioSettings.reset = ImGui::Button("Reset Audio Player");
-		
-			
 		ImGui::Spacing();
-
-		ImGui::Checkbox("Play Notes When Clicking", &m_audioSettings.enableNotesWhileClicking);
-		ImGui::Checkbox("Visual Audio Guide, (Will break pull audio)", &m_audioSettings.enableVisualGuide);
-		ImGui::Combo("Audio Frequency Metric", &m_audioSettings.metric, "Importance\0Distance");
-		
 		m_audioSettings.mute = m_audioSettings.volume <= 0.0f;
+
+		ImGui::Combo("Audio Frequency Metric", &m_audioSettings.metric, "Importance\0Similarity");
+
 
 		ImGui::Spacing();
 		ImGui::Text("Current Audio Device: ");
 		ImGui::SameLine();
 		ImGui::Text(m_audioSettings.defaultDevice.c_str());
-		
+
 		ImGui::EndMenu();
+	}
+
+}
+
+void UiRenderer::audioSettingsGUI() {
+	if (ImGui::CollapsingHeader("Audio", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::Checkbox("Mute Audio", &m_audioSettings.mute);
+		ImGui::Checkbox("Enable Visual Audio Guide", &m_selectionSettings.enableVisualAudioGuide);
+
+		std::string text;
+		if (m_audioSettings.importance) {
+			m_audioSettings.metric = 0;
+			text = "Playback on importance";
+		}
+		else {
+			m_audioSettings.metric = 1;
+			m_selectionSettings.enableFocusLine = true;
+			text = "Playback on similarity";
+		}
+		ImGui::Checkbox(text.c_str(), &m_audioSettings.importance);
 	}
 
 }
@@ -202,7 +217,8 @@ void lineweaver::UiRenderer::keybindingsInfoGUI()
 
 		ImGui::Text("Displacment:");
 		ImGui::Text("Mouse Scroll Wheel - Lens Displacment / Angular brush angle");
-		ImGui::Text("Shift + Left Mouse - Change lens depth when enabled");
+		ImGui::Text("Shift + W or S - Hold to change lens radius");
+		ImGui::Text("Ctrl + W or S - Hold to change lens depth up or down");
 
 		ImGui::Spacing();
 
@@ -213,9 +229,10 @@ void lineweaver::UiRenderer::keybindingsInfoGUI()
 		ImGui::Spacing();
 
 		ImGui::Text("Audio:");
-		ImGui::Text("F - Play 10 closest lines for each importance layer");
 		ImGui::Text("P - Play audio for selected lines when they are within the lens");
+		ImGui::Text("P - While similarity audio feedback mode is enabled, only play selected notes");
 		ImGui::Text("G - Play every line within the the lens in importance order");
+		ImGui::Text("M - Change the audiofeedback mode between: Importance and Similarity");
 
 		ImGui::EndMenu();
 
@@ -240,6 +257,9 @@ std::string UiRenderer::generateDefines() {
 
 	if (m_lineSettings.enableLineHalos)
 		defines += "#define LINE_HALOS\n";
+
+	if (m_selectionSettings.enableVisualAudioGuide)
+		defines += "#define AUDIO_GUIDE\n";
 
 	// Depricated now, as RS_LINKEDLIST is always used
 	if (true /*LinkedListRendering* r = dynamic_cast<LinkedListRendering*>(renderingStrategy)*/)

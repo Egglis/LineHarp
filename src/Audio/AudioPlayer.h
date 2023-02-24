@@ -12,7 +12,8 @@ namespace lineweaver {
 namespace gam {
 
 	struct StagedNote {
-		StagedNote(float f, float a) : amp{a}, freq{ f } {};
+		StagedNote(int id, float f, float a) : id{ id }, amp{a}, freq{ f } {};
+		int id;
 		float amp;
 		float freq;
 
@@ -27,8 +28,8 @@ namespace gam {
 
 		AudioPlayer(lineweaver::UiRenderer* ui) : m_ui(ui) {};
 
-		void playNote(float value, int angle);
-		void setAvailableNotes(std::vector<std::pair<float, int>> lines, int sort = 0);
+		void playNote(int id, float value, int angle);
+		void setAvailableNotes(std::vector<std::pair<int, std::pair<float, int>>> lines, int sort = 0);
 
 		void sortStagedNotes(int sortMode);
 
@@ -42,7 +43,7 @@ namespace gam {
 
 		float preComputeAmplitudeReScaling();
 
-
+		std::map<int, float> peekBufferOsc() { return mNoteBuffer.getOscillation(); };
 
 	private:
 		lineweaver::UiRenderer* m_ui;
@@ -64,27 +65,3 @@ namespace gam {
 		bool mStopQue = false;
 	};
 }
-// void sortQueue(int metric) {  };
-
-/*
-// The Main Game Thread, Scary!
-void NoteBuffer::popQueIfReady(float deltaTime, float target){
-	internalBufferTimer += deltaTime;
-	if (internalBufferTimer > target) {
-
-		auto sNote = std::move(mNoteQue.front());
-
-		std::unique_lock<std::mutex> lock(mtx);
-
-		mNotes.push_back(new Note(sNote->freq, sNote->amp));
-
-		lock.unlock();
-
-		mNoteQue.pop_front();
-
-		// Reset Timer
-		internalBufferTimer = 0.0f;
-	}
-}
-
-*/

@@ -4,7 +4,7 @@
 #include <thread>
 #include <shared_mutex>
 #include <deque>
-
+#include <map>
 #include "Note.h"
 
 namespace gam {
@@ -14,12 +14,16 @@ namespace gam {
 
 	class NoteBuffer {
 	public:
-		void addNote(float f, float a, float reScale = -1);
+		void addNote(int i, float f, float a, float reScale = -1);
 
 		// Sums all Notes
 		float readBuffer();
+
+		// Mainly used for rendering the "wiggle" effect, eventually passed to the shaders stages
+		std::map<int, float> getOscillation();
 	private:
 		std::vector<Note*> mNotes;
+		std::map<int, float> mOsc;
 		std::mutex mtx;
 	};
 

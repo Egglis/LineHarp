@@ -25,23 +25,15 @@ namespace Settings {
 
 	struct Audio
 	{
-		int min_note = 0;
-		int max_note = 71;
 
-		float note_interval = 0.1f;
+		float note_interval = 0.025f;
 		float volume = 0.2f;
 
 		bool mute = false;
-		bool enableNotesWhileClicking = true;
-		bool enableVisualGuide = false;
-		bool reset = false;
-
-
 		int metric = 0;
-		
-		float minAmp = 0.2;
-
+		bool importance = true;
 		std::string defaultDevice = "None";
+
 	};
 
 	struct File {
@@ -65,11 +57,13 @@ namespace Settings {
 
 	struct Selection
 	{
+		bool enableVisualAudioGuide = false;
 		bool enableFocusLine = false;
 		int focusLineId = 0;
+		int audioLineId = 0; // Mostly used as a visual guide for the audio feedback
 
-		int selectionMode = 0; // 0-SingleSelection, 1-Importance, 2-Similarity, 3-Distance
-		float selectionRange = 0.1f;
+		int selectionMode = 4; // 
+		float selectionRange = 0.25f;
 
 		bool enablePullBackground = false;
 	};
@@ -113,6 +107,7 @@ namespace lineweaver
 
 		// Audio Setttings
 		void audioSettingsGUI();
+		void audioSettingsMenuGUI();
 		Settings::Audio* Audio() { return &m_audioSettings; };
 
 		void keybindingsInfoGUI();

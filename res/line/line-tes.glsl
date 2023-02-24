@@ -25,6 +25,8 @@ patch in float imp_p0;
 patch in float imp_p3;
 patch in float t_value;
 uniform float pullTime;
+uniform float lineOsc;
+
 
 flat out vec2 segDirPreDisplacement;
 flat out float segDistToMouse;
@@ -84,6 +86,8 @@ vec4 catmull(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float u ){
 
 // Constructs the left and right vertex of current position based on prev and next
 void constructLeftRightVertex(vec4 prev_pos, vec4 pos, vec4 next_pos){
+		
+	
 	float fragmentLineWidth = length(modelViewProjectionMatrix*vec4(0.0f, 0.0f, 0.0f, 1.0f) - modelViewProjectionMatrix*(vec4(lineWidth, 0.0f, 0.0f, 1.0f)));
 
 	float aspectRatio = viewportSize.x/viewportSize.y;
@@ -176,6 +180,12 @@ float pullImp_p1, pullImp_p2;
 	// Current Position
 	pos = mix(p1, p2, t1);
 
+	vec2 tan0, tan1, tan2;
+	vec2 n0, n1, n2;
+
+	tan1 = vec2(p2.x - p1.x, p2.y - p1.y);
+	n1 = vec2(-tan1.y, tan1.x);
+	bool noWiggle = false;
 	// Edge cases when a patch ends and starts 
 	if(vertexIndex == 0){
 		prev_pos = mix(p0, p1, 1.0f - du);
@@ -184,6 +194,14 @@ float pullImp_p1, pullImp_p2;
 		next_pos = mix(p1, p2, t2);
 		next_imp = mix(imp_p1, imp_p2, t2);
 
+		tan0 = vec2(p1.x - p0.x, p1.y - p0.y);
+		tan2 = tan1;
+
+		n0 = vec2(-tan0.y, tan0.x);
+		n2 = n1;
+
+		noWiggle = true;
+
 	} else if (vertexIndex == totalPoints){
 		prev_pos = mix(p1, p2, t0);
 		prev_imp = mix(imp_p1, imp_p2, t0);
@@ -191,18 +209,47 @@ float pullImp_p1, pullImp_p2;
 		next_pos = mix(p2, p3, 0.0f + du);
 		next_imp = mix(imp_p2, imp_p3, 0.0f + du);
 
+		tan0 = tan1;
+		tan2 = vec2(p3.x - p2.x, p3.y - p2.y);
+
+		n0 = n1;
+		n2 = vec2(-tan2.y, tan2.x);
+
+		noWiggle = true;
+
 	} else {
 		prev_pos = mix(p1, p2, t0);
 		prev_imp = mix(imp_p1, imp_p2, t0);
 
 		next_pos = mix(p1, p2, t2);
 		next_imp = mix(imp_p1, imp_p2, t2);
+
+		tan0 = tan1;
+		tan2 = tan1;
+
+		n0 = n1;
+		n2 = n1;
 	}
+
+	if(lineOsc != 0){
+		float osc = lineOsc / 5.0;
+		if(!noWiggle){
+			pos.xy += n1*osc;
+			prev_pos.xy += n0*osc;
+			next_pos.xy += n2*osc;
+		
+		}
+
+
+
+	}
+
 
 	// Displacments 
 	pos = displace(pos, vertexImportance);
 	prev_pos = displace(prev_pos, prev_imp);
 	next_pos = displace(next_pos, next_imp);
+
 
 	vsOut.prev = prev_pos.xy;
 	vsOut.next = next_pos.xy;

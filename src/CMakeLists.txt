@@ -27,7 +27,6 @@ target_link_libraries(lineweaver PRIVATE portaudio)
 find_path(STB_INCLUDE_DIRS "stb_c_lexer.h")
 target_include_directories(lineweaver PRIVATE ${STB_INCLUDE_DIRS})
 
-
 find_path(GAMMA_INCLUDE_DIR Gamma/Gamma.h)
 target_include_directories(lineweaver PRIVATE ${GAMMA_INCLUDE_DIR})
 
