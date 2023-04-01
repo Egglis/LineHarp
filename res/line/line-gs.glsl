@@ -98,13 +98,12 @@ void main() {
 	spawnPoint(vsOut[0].left, 0);
 	spawnPoint(vsOut[0].right, 0);
 
-
 	spawnPoint(vsOut[1].left, 1);
 	spawnPoint(vsOut[1].right, 1);
 
 	// Debugging Tesselation control shader
 
-	//spawnPoint(gl_in[1].gl_Position, 1);
+	///spawnPoint(gl_in[1].gl_Position, 1);
 	//spawnPoint(gl_in[1].gl_Position, 1);
 
 	EndPrimitive();

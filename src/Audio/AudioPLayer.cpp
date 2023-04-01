@@ -43,7 +43,7 @@ void AudioPlayer::mainThread(float deltaTime, int mode) {
 void AudioPlayer::mainTimerPlayback(float deltaTime, bool repeat) {
 
 	mInternalTimer += deltaTime;
-
+	bpm += deltaTime;
 	if (mInternalTimer > m_ui->Audio()->note_interval && !mStagedNotes.empty()) {
 
 		// Retrive and play the next note
@@ -53,8 +53,8 @@ void AudioPlayer::mainTimerPlayback(float deltaTime, bool repeat) {
 			if(m_ui->Selection()->enableVisualAudioGuide) m_ui->Selection()->audioLineId = sNote.get()->id;
 
 
-
 			mNoteBuffer.addNote(sNote.get()->id, sNote.get()->freq, sNote.get()->amp, -1);
+			beats += 1;
 
 			// Increment index and reset timer for next Staged Note
 			mIndex += 1;
@@ -67,6 +67,12 @@ void AudioPlayer::mainTimerPlayback(float deltaTime, bool repeat) {
 	if (mIndex >= mStagedNotes.size()) {
 		mIndex = 0;
 		mStopQue = !repeat;
+	}
+
+	if (bpm > 60.0) {
+		globjects::debug() << "Current BPM: " << bpm << std::endl;
+		beats = 0;
+		bpm = 0.0f;
 	}
 }
 

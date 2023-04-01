@@ -106,6 +106,8 @@ namespace lineweaver
 		int m_incLensDepth = 0;
 		int m_incLensRadius = 0;
 		KeyButton m_playbackModeButton;
+		bool m_audioTest = false;
+
 	private:
 
 		void beginFrame();

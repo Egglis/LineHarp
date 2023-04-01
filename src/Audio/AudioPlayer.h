@@ -63,5 +63,8 @@ namespace gam {
 
 		bool mAudioOn = false;
 		bool mStopQue = false;
+
+		float bpm = 0.0f;
+		int beats = 0;
 	};
 }

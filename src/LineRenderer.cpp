@@ -352,10 +352,29 @@ void LineRenderer::display()
 	m_previousLensDisp = m_uiRenderer.Lens()->lensDisp;
 
 	// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	// For custome fixed speed mouse movement:
+	// 500, 45
+	const float r = 200;
+	const glm::vec2 start = vec2(853, 50);
+	const glm::vec2 end = vec2(853, 950);
+	const float total_time = 5.0;
+	// 548, 513
+
+	// Figure: X = (853, 50) -> (853, 950), Duration = 5sec
 
 	if (mAudioMode != GLOBAL) {
 		double mouseX, mouseY;
 		glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+
+		// Audio Testing
+		if (viewer()->m_audioTest) {
+
+
+			mouseY = glm::mix(0, 180, m_audioTestTimer / total_time);
+			mouseX = glm::mix(start.x, end.x, m_audioTestTimer / total_time);
+			mouseY = glm::mix(start.y, end.y, m_audioTestTimer / total_time);
+
+		}
 
 		glm::vec2 tempLensPosition = m_lensPosition;
 		m_lensPosition = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
@@ -368,8 +387,17 @@ void LineRenderer::display()
 
 	}
 
+
+	
 	double mouseX, mouseY;
 	glfwGetCursorPos(viewer()->window(), &mouseX, &mouseY);
+
+
+	if (viewer()->m_audioTest) {
+		mouseX = glm::mix(start.x, end.x, m_audioTestTimer / total_time);
+		mouseY = glm::mix(start.y, end.y, m_audioTestTimer / total_time);
+	}
+
 
 	glm::vec2 position = vec2(2.0f * float(mouseX) / float(viewportSize.x) - 1.0f, -2.0f * float(mouseY) / float(viewportSize.y) + 1.0f);
 
@@ -490,6 +518,19 @@ void LineRenderer::display()
 		Settings::Audio* audioSet = m_uiRenderer.Audio();
 		audioSet->importance = !audioSet->importance;
 		viewer()->m_playbackModeButton.release();
+	}
+
+
+	if (viewer()->m_audioTest) {
+		m_audioTestTimer += deltaTime;
+
+		if (m_audioTestTimer > total_time) {
+
+			globjects::debug() << "Audio Test complete, Total beats: " << m_totalBpm <<  std::endl;
+			m_audioTestTimer = 0.0f;
+			viewer()->m_audioTest = false;
+			m_totalBpm = 0;
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -757,10 +798,17 @@ void LineRenderer::display()
 	const bool legalDegree = degrees < 181;
 	const bool isEnabled = mode == NONE || (mode == PULL && !m_uiRenderer.Audio()->importance);
 
+	// Only used for checking mouse positions, when making audio tests
+	if (viewer()->m_mousePressed[0]) {
+		globjects::debug() << mouseX << ", " << mouseY << std::endl;
+	}
+	
+
 	if (idWithinBounds && legalDegree && isEnabled && !viewer()->m_lensRadiusChanging) {
 
 
 		if (viewer()->m_mousePressed[0]) {
+			globjects::debug() << mouseX << ", " << mouseY << std::endl;
 			m_uiRenderer.setFocusId(id);
 		}
 
@@ -768,7 +816,7 @@ void LineRenderer::display()
 		const bool timerReset = audioTimer >= m_uiRenderer.Audio()->note_interval;
 
 		if (mouseMoved && timerReset && !m_uiRenderer.Audio()->mute) {
-
+			m_totalBpm += 1;
 			SimTable* simTable = renderingStrategy->getSimTable();
 			float vol = 0.0;
 
@@ -802,6 +850,7 @@ void LineRenderer::display()
 
 			SubData subData = getSubDataFromLensBuffer(i);
 			const Settings::Selection* selSettings = m_uiRenderer.Selection();
+
 
 			const bool isInsideLens = subData.dist > 0;
 			if (isInsideLens) {

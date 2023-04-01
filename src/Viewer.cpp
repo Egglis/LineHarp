@@ -371,6 +371,9 @@ void Viewer::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 			viewer->m_incLensDepth = 0;
 		}
 
+		if (key == GLFW_KEY_L) {
+			viewer->m_audioTest = true;
+		}
 
 		for (auto& i : viewer->m_interactors)
 		{

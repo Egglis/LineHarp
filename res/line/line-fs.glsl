@@ -62,6 +62,20 @@ uniform float testSlider;
 uniform float similarity;
 uniform float lineOsc;
 
+
+vec4 colors[8];
+
+void initColors(){
+    colors[0] = vec4(0.105882, 0.619608, 0.466667, 1.0);   // Dark2-1
+    colors[1] = vec4(0.850980, 0.372549, 0.007843, 1.0);   // Dark2-2
+    colors[2] = vec4(0.458824, 0.439216, 0.701961, 1.0);   // Dark2-3
+    colors[3] = vec4(0.905882, 0.160784, 0.541176, 1.0);   // Dark2-4
+    colors[4] = vec4(0.400000, 0.650980, 0.117647, 1.0);   // Dark2-5
+    colors[5] = vec4(0.901961, 0.670588, 0.007843, 1.0);   // Dark2-6
+    colors[6] = vec4(0.650980, 0.462745, 0.113725, 1.0);   // Dark2-7
+    colors[7] = vec4(0.400000, 0.400000, 0.400000, 1.0);   // Dark2-8
+}
+
 vec3 indexToColor(int index) {
 	return vec3(
 	float(index & 0xff) / 255.0,
@@ -89,7 +103,7 @@ float computeDistanceToLineSegment(vec2 v, vec2 w, vec2 p){
 
 void main()
 {	
-
+	initColors();
 	const float lineWidth = 0.25;//0.125;
 
 #ifdef RS_LINKEDLIST
@@ -106,8 +120,9 @@ void main()
 	// normalize it using the line width in projection space
 	float distanceToLine = distanceToCurrent / gsFragmentLineWidth;
 #endif
-
-	vec3 currentLineColor = lineColor;
+	
+	//vec3 currentLineColor = lineColor;
+	vec3 currentLineColor = colors[int(gsFragmentImportance*8)].xyz;
 	
 #ifdef RANDOM_LINE_COLORS
 	currentLineColor = getRandomizedColors(trajectoryID);

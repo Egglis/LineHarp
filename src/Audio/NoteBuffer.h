@@ -19,7 +19,7 @@ namespace gam {
 		// Sums all Notes
 		float readBuffer();
 
-		// Mainly used for rendering the "wiggle" effect, eventually passed to the shaders stages
+		// Mainly used for rendering the "wiggle" effect, eventually passed to the shaders stages: Returns the ocelating sound
 		std::map<int, float> getOscillation();
 	private:
 		std::vector<Note*> mNotes;

@@ -27,11 +27,12 @@ public:
         return closestNote;
     };
 
+
     static float mapAngleToNote(int angle) {
         float oldRange = float(180 - 0);
-
-        float newMin = 16.36f;
-        float newRange = (987.77f - newMin);
+           
+        float newMin = 135.0f;
+        float newRange = (1000.0f - newMin);
 
         return ((float(angle) * newRange) / oldRange) + newMin;
     };
@@ -42,7 +43,7 @@ public:
 
 
 const std::vector<FreqPair> FreqMap::m_Notes({
-    FreqPair(16.35f, "C0"),
+        FreqPair(16.35f, "C0"),
         FreqPair(17.32f, "C+0"),
         FreqPair(18.35f, "D0"),
         FreqPair(19.45f, "D+0"),

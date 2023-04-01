@@ -149,6 +149,9 @@ namespace lineweaver
 		AudioMode mPrevFrameAudioMode = NONE;
 
 		int m_incHoldCounter = 1;
+
+		int m_totalBpm = 0;
+		float m_audioTestTimer = 0.0;
 		// ------------------------------------------------------------------------------------------
 	};
 

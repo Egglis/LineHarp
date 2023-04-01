@@ -9,7 +9,6 @@
 using namespace gam;
 
 
-
 void NoteBuffer::addNote(int i, float f, float a, float reScale)
 {
 
@@ -32,6 +31,7 @@ std::map<int, float> NoteBuffer::getOscillation() {
 	return copy;
 }
 
+
 float NoteBuffer::readBuffer()
 {
 
@@ -44,6 +44,7 @@ float NoteBuffer::readBuffer()
 	for (const auto& note : mNotes) {
 		sum += note->amp();
 	}
+
 	float max = 0.6f;
 	reScale = std::min(max / sum, max);
 	
@@ -60,13 +61,12 @@ float NoteBuffer::readBuffer()
 		
 
 		// TODO make the falloff an adv option --> 
-		note->reduce(0.000001 * mNotes.size()); 
+		 note->reduce(0.000001 * mNotes.size()); 
 
 		// Mark notes which amplitude < 0 for deletion
 		if (note->done()) {
 			to_delete.push_back(note);
 		}
-
 	}
 
 	// Finally delete all notes that are complete

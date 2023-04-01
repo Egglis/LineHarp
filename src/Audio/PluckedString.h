@@ -37,7 +37,11 @@ public:
 
 	// Creates some sort of feedback loop 
 	float operator() () {
+
+
 		return p();
+
+
 		return (*this)(noise() * env());
 	}
 
