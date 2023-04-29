@@ -63,8 +63,8 @@ uniform float similarity;
 uniform float lineOsc;
 
 
+// Very basic color map, only for Figures and not very dynamic
 vec4 colors[8];
-
 void initColors(){
     colors[0] = vec4(0.105882, 0.619608, 0.466667, 1.0);   // Dark2-1
     colors[1] = vec4(0.850980, 0.372549, 0.007843, 1.0);   // Dark2-2
@@ -121,8 +121,10 @@ void main()
 	float distanceToLine = distanceToCurrent / gsFragmentLineWidth;
 #endif
 	
-	//vec3 currentLineColor = lineColor;
-	vec3 currentLineColor = colors[int(gsFragmentImportance*8)].xyz;
+	vec3 currentLineColor = lineColor;
+
+	// Very basic cluster coloring, only for showcasing and Figures, not very dynamic
+	// vec3 currentLineColor = colors[int(gsFragmentImportance*8)].xyz;
 	
 #ifdef RANDOM_LINE_COLORS
 	currentLineColor = getRandomizedColors(trajectoryID);
