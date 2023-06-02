@@ -239,9 +239,6 @@ float pullImp_p1, pullImp_p2;
 			next_pos.xy += n2*osc;
 		
 		}
-
-
-
 	}
 
 

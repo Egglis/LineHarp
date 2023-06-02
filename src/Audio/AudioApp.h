@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include "Gamma/AudioIO.h"
 #include "Gamma/Domain.h"
+#include <chrono>
+
 
 //  A very basic audio application abstraction
 namespace gam {
@@ -33,6 +35,7 @@ namespace gam {
 		void start(bool block = false) {
 			mAudioIO.start();
 		}
+
 
 	private:
 		AudioIO mAudioIO;

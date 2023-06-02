@@ -4,9 +4,8 @@
 #include "PluckedString.h"
 
 
-
-
 namespace gam {
+
 
 	class Note {
 	public:

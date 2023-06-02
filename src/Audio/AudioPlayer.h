@@ -4,6 +4,7 @@
 #include "AudioApp.h"
 #include "../UiRenderer.h"
 #include "NoteBuffer.h"
+#include <chrono>
 
 namespace lineweaver {
 	enum AudioMode;
@@ -44,6 +45,13 @@ namespace gam {
 		float preComputeAmplitudeReScaling();
 
 		std::map<int, float> peekBufferOsc() { return mNoteBuffer.getOscillation(); };
+
+		int frameCount = 0;
+
+		std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::time_point(std::chrono::milliseconds(0));;
+		int current_id = 0;
+		
+		float mSound = 0;
 
 	private:
 		lineweaver::UiRenderer* m_ui;

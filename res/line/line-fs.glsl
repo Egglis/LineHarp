@@ -63,6 +63,7 @@ uniform float similarity;
 uniform float lineOsc;
 
 
+
 // Very basic color map, only for Figures and not very dynamic
 vec4 colors[8];
 void initColors(){
@@ -124,15 +125,14 @@ void main()
 	vec3 currentLineColor = lineColor;
 
 	// Very basic cluster coloring, only for showcasing and Figures, not very dynamic
-	// vec3 currentLineColor = colors[int(gsFragmentImportance*8)].xyz;
+	//vec3 currentLineColor = colors[int(gsFragmentImportance*8)].xyz;
 	
 #ifdef RANDOM_LINE_COLORS
 	currentLineColor = getRandomizedColors(trajectoryID);
 #endif
 
 #ifdef FOCUS_LINE
-	currentLineColor = mix(lineColor, focusLineColor, similarity);
-
+	currentLineColor = mix(currentLineColor, focusLineColor, similarity);
 
 #endif
 

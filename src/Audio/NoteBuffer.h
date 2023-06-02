@@ -25,6 +25,7 @@ namespace gam {
 		std::vector<Note*> mNotes;
 		std::map<int, float> mOsc;
 		std::mutex mtx;
+
 	};
 
 

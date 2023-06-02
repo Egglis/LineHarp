@@ -150,8 +150,15 @@ namespace lineweaver
 
 		int m_incHoldCounter = 1;
 
+
+		// Perfromance Testing
 		int m_totalBpm = 0;
 		float m_audioTestTimer = 0.0;
+
+		float maxFps = 0;
+		float minFps = 100000000000;
+		float totFps = 0;
+		int contFps = 0;
 		// ------------------------------------------------------------------------------------------
 	};
 

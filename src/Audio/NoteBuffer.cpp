@@ -42,7 +42,7 @@ float NoteBuffer::readBuffer()
 
 	float sum = 0.0f;
 	for (const auto& note : mNotes) {
-		sum += note->amp();
+		sum += std::abs(note->amp());
 	}
 
 	float max = 0.6f;
@@ -57,8 +57,6 @@ float NoteBuffer::readBuffer()
 		sound += note->pluck() * am;
 
 		if (note->getLineID() > -1) mOsc[note->getLineID()] = sound;
-
-		
 
 		// TODO make the falloff an adv option --> 
 		 note->reduce(0.000001 * mNotes.size()); 

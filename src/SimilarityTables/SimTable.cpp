@@ -14,7 +14,6 @@ using namespace lineweaver;
 // Gets the similarity for, focus: row, current: col
 float SimTable::get(int focus, int current, float range) {
 
-	
 
 	if (SelectionModes::SINGLE == m_mode || range <= 0.0f) {
 		if (focus == current) return 1.0f;
@@ -32,6 +31,7 @@ float SimTable::get(int focus, int current, float range) {
 		}
 	}
 	else {
+		if (m_midPointTable.size() == 0) return 0.0f;
 
 		const int sizeX = m_midPointTable.size();
 		const int sizeY = m_midPointTable.at(0).size();
@@ -54,7 +54,6 @@ float SimTable::get(int focus, int current, float range) {
 
 void SimTable::setup(Table* table, int mode) {
 
-	//globjects::debug() << table->m_filePath << std::endl;
 
 	int good = 0;
 	std::string filePath = table->m_fileName;
@@ -94,10 +93,16 @@ void SimTable::setup(const Table* table, int mode) {
 	int good = 0;
 	std::string filePath = copy->m_fileName;
 
-
+	/*
+	if (mode == 1) {
+		m_importanceTable = m_importance;
+		return;
+	}
+	*/
 	// Check if a cache entry exists for this data file
 	if (!mCache.isCache(filePath)) {
 		good = mCache.makeCacheFolder(filePath);
+
 		if (good == 1) { // Folder was generate correctly
 			if(mode == 0) iterateLines(copy);
 
@@ -326,6 +331,7 @@ int SimTableCache::makeCacheFolder(std::string& fileName)
 
 int SimTableCache::save(const std::string& filepath, const std::vector<std::vector<float>>& data, int type)
 {	
+	globjects::debug() << data << std::endl;
 
 	std::string file_path = filepath;
 	std::filesystem::path p(file_path);

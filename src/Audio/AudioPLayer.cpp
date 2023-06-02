@@ -5,29 +5,47 @@
 // TODO remove
 #include <globjects/globjects.h>
 #include <globjects/logging.h>
+#include <chrono>
 
 using namespace gam;
+
+int frameCount = 0;
+bool isRunning = true;
+
 
 // Main Audio Thread
 void AudioPlayer::onAudio(AudioIOData& io)
 {
-
 	// Display the current Audio Device in the GUI
 	if (m_ui->Audio()->defaultDevice == "None") {
 		m_ui->Audio()->defaultDevice = gam::AudioDevice::defaultOutput().name();
 	}
-
+	
+	float s = 0;
 	while (io()) {
 
 		// toggle on/off audio
 		if (!mAudioOn) continue;
 
-
-		float s = 0;
+		s = 0;
 		s = mNoteBuffer.readBuffer();
-				
+		
 		io.out(0) = s;
+
 	}
+
+	mSound = s;
+
+	auto endTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+	//globjects::debug() << s << std::endl;
+
+	if (duration < 100 && current_id == 1 && std::abs(s) > 0) {
+		std::cout << "Audio Latancy " << duration << ", " << current_id << std::endl;
+		current_id = 0;
+	}
+
+
 }
 
 // Called every frame

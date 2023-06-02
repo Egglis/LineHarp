@@ -18,8 +18,6 @@ enum SelectionModes {
 
 namespace lineweaver {
 
-
-
 	class SimTableCache {
 	public:
 		int makeCacheFolder(std::string& fileName);

@@ -22,6 +22,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
+#include <chrono>
 
 
 using namespace lineweaver;
@@ -134,7 +135,7 @@ LineRenderer::LineRenderer(Viewer* viewer) : Renderer(viewer), m_uiRenderer(), m
 
 void LineRenderer::display()
 {
-
+	
 
 	auto currentState = State::currentState();
 
@@ -194,11 +195,34 @@ void LineRenderer::display()
 	static bool importanceChanged = false;
 
 	m_uiRenderer.animationSettingsGUI();
-	m_uiRenderer.audioSettingsMenuGUI();
+
+	if (ImGui::BeginMenu("Audio Settings")) {
+		m_uiRenderer.audioSettingsMenuGUI();
+
+		
+		static std::list<float> frameratesList;
+		frameratesList.push_back(m_AudioPlayer.mSound);
+
+		while (frameratesList.size() > 128)
+			frameratesList.pop_front();
+
+		static float framerates[128];
+		int i = 0;
+		for (auto v : frameratesList)
+			framerates[i++] = v;
+
+
+		std::string s = "";
+
+		// ImGui::Begin("Information");
+		//ImGui::SameLine( - 220.0f);
+		ImGui::PlotLines(s.c_str(), framerates, frameratesList.size(), 0, 0, -0.3f, 0.3f, ImVec2(ImGui::CalcItemWidth(), 128.0f));
+		// ImGui::End();
+		
+		ImGui::EndMenu();
+	}
+
 	m_uiRenderer.keybindingsInfoGUI();
-	
-
-
 
 	ImGui::Begin("Importance Driven Dense Line Graphs");
 
@@ -355,11 +379,20 @@ void LineRenderer::display()
 	// For custome fixed speed mouse movement:
 	// 500, 45
 	const float r = 200;
-	const glm::vec2 start = vec2(853, 50);
+	const glm::vec2 start = vec2(853, 950);
 	const glm::vec2 end = vec2(853, 950);
 	const float total_time = 5.0;
 	// 548, 513
-
+	// 
+	// Perfromance Measures 
+	// vec2(853, 50);
+	// vec2(853, 950);
+	// 
+	// 
+	// Iris:
+	// vec2(1250, 50);
+	// vec2(1250, 950);
+	// 
 	// Figure: X = (853, 50) -> (853, 950), Duration = 5sec
 
 	if (mAudioMode != GLOBAL) {
@@ -368,12 +401,9 @@ void LineRenderer::display()
 
 		// Audio Testing
 		if (viewer()->m_audioTest) {
-
-
-			mouseY = glm::mix(0, 180, m_audioTestTimer / total_time);
+			// mouseY = glm::mix(0, 180, m_audioTestTimer / total_time);
 			mouseX = glm::mix(start.x, end.x, m_audioTestTimer / total_time);
 			mouseY = glm::mix(start.y, end.y, m_audioTestTimer / total_time);
-
 		}
 
 		glm::vec2 tempLensPosition = m_lensPosition;
@@ -524,12 +554,26 @@ void LineRenderer::display()
 	if (viewer()->m_audioTest) {
 		m_audioTestTimer += deltaTime;
 
+		float fps = ImGui::GetIO().Framerate;
+		
+		if (fps > maxFps) maxFps = fps;
+		if (fps < minFps) minFps = fps;
+		totFps += fps;
+		contFps += 1;
+
 		if (m_audioTestTimer > total_time) {
 
 			globjects::debug() << "Audio Test complete, Total beats: " << m_totalBpm <<  std::endl;
+			globjects::debug() << "Max: " << maxFps << " - Min: " << minFps << " - Avg: " << totFps / contFps << std::endl;
+			
 			m_audioTestTimer = 0.0f;
 			viewer()->m_audioTest = false;
 			m_totalBpm = 0;
+
+			maxFps = 0;
+			minFps = 10000000;
+			totFps = 0.0;
+			contFps = 0;
 		}
 	}
 
@@ -800,9 +844,11 @@ void LineRenderer::display()
 
 	// Only used for checking mouse positions, when making audio tests
 	if (viewer()->m_mousePressed[0]) {
-		globjects::debug() << mouseX << ", " << mouseY << std::endl;
+		//globjects::debug() << mouseX << ", " << mouseY << std::endl;
 	}
 	
+
+
 
 	if (idWithinBounds && legalDegree && isEnabled && !viewer()->m_lensRadiusChanging) {
 
@@ -816,7 +862,6 @@ void LineRenderer::display()
 		const bool timerReset = audioTimer >= m_uiRenderer.Audio()->note_interval;
 
 		if (mouseMoved && timerReset && !m_uiRenderer.Audio()->mute) {
-			m_totalBpm += 1;
 			SimTable* simTable = renderingStrategy->getSimTable();
 			float vol = 0.0;
 
@@ -831,6 +876,7 @@ void LineRenderer::display()
 
 			if (!skipPlayNote) {
 				m_AudioPlayer.playNote(id, vol, degrees);
+				m_totalBpm += 1;
 			}
 
 			prevID = id;
@@ -841,6 +887,12 @@ void LineRenderer::display()
 
 	// Audio for speciall key presses
 	if(mode != NONE && mode != mPrevFrameAudioMode && mode != RADIUS|| mode == PULL){
+
+		if (m_AudioPlayer.current_id == 0) {
+			m_AudioPlayer.startTime = std::chrono::high_resolution_clock::now();
+			m_AudioPlayer.current_id = 1;
+		}
+		
 
 		SimTable* simTable = renderingStrategy->getSimTable();
 		std::vector<std::pair<int,  std::pair<float, int>>> tmpLines;

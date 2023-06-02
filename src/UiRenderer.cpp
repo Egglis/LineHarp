@@ -170,7 +170,7 @@ void UiRenderer::animationSettingsGUI() {
 }
 
 void UiRenderer::audioSettingsMenuGUI() {
-	if (ImGui::BeginMenu("Audio Settings")) {
+	
 		ImGui::SliderFloat("Interval between each note:", &m_audioSettings.note_interval, 0.0, 1.0);
 		ImGui::SliderFloat("Global volume", &m_audioSettings.volume, 0.0, 1.0);
 
@@ -185,8 +185,6 @@ void UiRenderer::audioSettingsMenuGUI() {
 		ImGui::SameLine();
 		ImGui::Text(m_audioSettings.defaultDevice.c_str());
 
-		ImGui::EndMenu();
-	}
 
 }
 

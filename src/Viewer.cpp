@@ -503,10 +503,10 @@ void Viewer::endFrame()
 	stream << std::fixed << std::setprecision(2) << ImGui::GetIO().Framerate << " fps";
 	std::string s = stream.str();
 
-	//		ImGui::Begin("Information");
+	// ImGui::Begin("Information");
 	ImGui::SameLine(ImGui::GetWindowWidth() - 220.0f);
 	ImGui::PlotLines(s.c_str(), framerates, frameratesList.size(), 0, 0, 0.0f, 200.0f,ImVec2(128.0f,0.0f));
-	//		ImGui::End();
+	// ImGui::End();
 
 	ImGui::EndMainMenuBar();
 
